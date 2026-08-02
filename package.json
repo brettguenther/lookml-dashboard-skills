@@ -1,0 +1,26 @@
+{
+  "name": "@brettguenther/lookml-dashboard-skills",
+  "version": "1.0.0",
+  "description": "Production-grade LookML Dashboard skills for AI coding agents",
+  "bin": {
+    "lookml-dashboard-skills": "./bin/cli.js"
+  },
+  "main": "bin/cli.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brettguenther/lookml-dashboard-skills.git"
+  },
+  "keywords": [
+    "looker",
+    "lookml",
+    "dashboards",
+    "ai-agent",
+    "antigravity",
+    "skills",
+    "gemini",
+    "claude",
+    "cursor"
+  ],
+  "author": "Brett Guenther",
+  "license": "MIT"
+}
