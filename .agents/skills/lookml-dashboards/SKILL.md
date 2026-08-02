@@ -20,6 +20,9 @@ This skill distills the key characteristics of high-quality dashboards. For a de
   - [Timeline](references/elements/timeline.md)
   - [Word Cloud](references/elements/wordcloud.md)
 
+> [!IMPORTANT]
+> **Agent Execution Directive**: When building or modifying a specific dashboard element's YAML configuration (such as chart axes, series types, map styles, table formatting, or KPI comparisons), you **MUST** view the corresponding reference file under `references/elements/<vis_type>.md` (relative to this `SKILL.md`) to look up exact allowed property names, data types, and YAML nesting rules.
+
 ## 1. Dashboard Layout and Structure
 
 - **Layout Method**: Standardize on `layout: newspaper`. It provides a 24-column grid for flexible element positioning.
