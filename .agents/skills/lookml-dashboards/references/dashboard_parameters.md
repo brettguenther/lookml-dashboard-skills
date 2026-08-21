@@ -19,7 +19,7 @@ This reference summarizes the key parameters used to build high-quality dashboar
 | Parameter | Description | Best Practice |
 | :--- | :--- | :--- |
 | `type` | Visualization type. | Match type to the question (e.g., `looker_area` for trends). |
-| `modern2026` | Modern 2026 visualization engine. | Set to `true` by default for all visualization types EXCEPT KPI (`single_value`) and maps. |
+| `modern2026` | Modern 2026 visualization engine. | Set to `true` by default for all visualization types EXCEPT KPI (`single_value`), single record (`looker_single_record`), and maps (otherwise omit). |
 | `width` / `height` | Tile dimensions. | Use standard sizes (KPIs: 4x4, Trends: 12x8). |
 | `row` / `col` | Tile position. | Maintain clear horizontal and vertical alignment. |
 | `tab_name` | Tab assignment. | Must match a name defined in the top-level `tabs`. |

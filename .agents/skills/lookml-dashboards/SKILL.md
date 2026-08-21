@@ -102,7 +102,7 @@ Correlate different metric types (e.g., Sessions and Conversion Rate) in one til
 
 ## 6. Styling and Aesthetics
 
-- **Modern 2026 Theme (`modern2026: true`)**: At the dashboard element level, set `modern2026: true` for all visualization types (cartesian charts, tables/grids, funnels, timelines, word clouds, single records) **except** KPI (`single_value`) and map visualizations. This is the default on all element vis configs unless explicitly stated otherwise.
+- **Modern 2026 Theme (`modern2026: true`)**: At the dashboard element level, set `modern2026: true` for all visualization types (cartesian charts, tables/grids, funnels, timelines, word clouds) **except** KPI (`single_value`), single record (`looker_single_record`), and map visualizations. Set `modern2026: true` (otherwise omit). This is the default on all applicable element vis configs unless explicitly stated otherwise.
 - **Monotone Interpolation**: For line/area charts, use `interpolation: monotone` for a modern, smooth visual.
 - **Consistent Coloring**: Define `series_colors` for entity dimensions (e.g., Brand names) so they remain consistent across all tiles.
 - **Advanced Grid Styling**:
@@ -260,7 +260,7 @@ Geographic maps (`looker_map`) can easily become unreadable due to overlapping d
 
 - [ ] Uses `newspaper` layout on a 24-column grid.
 - [ ] Dashboard level includes `style: modern`.
-- [ ] `modern2026: true` is set on all element visualizations (except KPI and map elements).
+- [ ] `modern2026: true` is set on all applicable element visualizations (except KPI, single record, and map elements).
 - [ ] Cross-filtering is NOT enabled by default (only enable `crossfilter_enabled: true` if explicitly requested).
 - [ ] Visual hierarchy: KPIs -> Trends -> Details.
 - [ ] Every KPI has a comparison context (PoP or Goal).
