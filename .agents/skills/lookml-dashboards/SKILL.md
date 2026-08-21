@@ -20,8 +20,12 @@ This skill distills the key characteristics of high-quality dashboards. For a de
   - [Timeline](references/elements/timeline.md)
   - [Word Cloud](references/elements/wordcloud.md)
 
+> [!IMPORTANT]
+> **Agent Execution Directive**: When building or modifying a specific dashboard element's YAML configuration (such as chart axes, series types, map styles, table formatting, or KPI comparisons), you **MUST** view the corresponding reference file under `references/elements/<vis_type>.md` (relative to this `SKILL.md`) to look up exact allowed property names, data types, and YAML nesting rules.
+
 ## 1. Dashboard Layout and Structure
 
+- **Dashboard-Level Parameters**: Always include `layout: newspaper`, `preferred_viewer: dashboards-next`, and `style: modern` as defaults.
 - **Layout Method**: Standardize on `layout: newspaper`. It provides a 24-column grid for flexible element positioning.
 - **Sectioning**: Use `type: text` elements as section headers to create a visual narrative.
   - **Width**: Use `width: 24` to span the full dashboard.
@@ -98,6 +102,7 @@ Correlate different metric types (e.g., Sessions and Conversion Rate) in one til
 
 ## 6. Styling and Aesthetics
 
+- **Modern 2026 Theme (`modern2026: true`)**: At the dashboard element level, set `modern2026: true` for all visualization types (cartesian charts, tables/grids, funnels, timelines, word clouds) **except** KPI (`single_value`), single record (`looker_single_record`), and map visualizations. Set `modern2026: true` (otherwise omit). This is the default on all applicable element vis configs unless explicitly stated otherwise.
 - **Monotone Interpolation**: For line/area charts, use `interpolation: monotone` for a modern, smooth visual.
 - **Consistent Coloring**: Define `series_colors` for entity dimensions (e.g., Brand names) so they remain consistent across all tiles.
 - **Advanced Grid Styling**:
@@ -182,7 +187,7 @@ body_text: |
 
 ## 10. Performance and Interactivity
 
-- **Cross-Filtering**: Enable `crossfilter_enabled: true` for intuitive dashboard-wide filtering.
+- **Cross-Filtering**: Cross-filtering should **not** be enabled by default. Only enable `crossfilter_enabled: true` when explicitly requested.
 - **Tile Notes**: Provide on-dashboard documentation using the `note` parameter. High-quality tiles often use `note_state: collapsed` and `note_display: hover`.
 - **Auto Run**: Set `auto_run: false` for dashboards with many heavy queries.
 - **Query Timezone**: Always use `query_timezone: user_timezone`.
@@ -201,7 +206,7 @@ For dashboards intended to be embedded in external applications:
     tile_text_color: "#3a4245"
   ```
 
-## 11. Dashboard Polish (Small Details)
+## 12. Dashboard Polish (Small Details)
 
 The final 5% of effort often determines if a dashboard feels professional.
 
@@ -213,7 +218,7 @@ The final 5% of effort often determines if a dashboard feels professional.
 - **Top-N Analysis**: Use `limit_displayed_rows: true` with `limit_displayed_rows_values` to show "Top 10" or "Bottom 5" without over-complicating the query.
 - **Dynamic Legends**: Set `legend_position: center` or `right` based on the tile's width to maximize data real estate.
 
-## 12. Dashboard Validation, Outlier Handling, and Data Quality
+## 13. Dashboard Validation, Outlier Handling, and Data Quality
 
 A highly polished dashboard is only as good as the data it represents. Always perform investigative data validation using Looker MCP queries to identify anomalies, and apply proactive handling techniques either in the underlying lookML model or in the dashboard element query elements.
 
@@ -251,13 +256,15 @@ Geographic maps (`looker_map`) can easily become unreadable due to overlapping d
   map_marker_radius_min: 2
   ```
 
-## 13. Dashboard Quality Checklist
+## 14. Dashboard Quality Checklist
 
 - [ ] Uses `newspaper` layout on a 24-column grid.
+- [ ] Dashboard level includes `style: modern`.
+- [ ] `modern2026: true` is set on all applicable element visualizations (except KPI, single record, and map elements).
+- [ ] Cross-filtering is NOT enabled by default (only enable `crossfilter_enabled: true` if explicitly requested).
 - [ ] Visual hierarchy: KPIs -> Trends -> Details.
 - [ ] Every KPI has a comparison context (PoP or Goal).
 - [ ] Dual axes are used where metric scales differ significantly.
-- [ ] `crossfilter_enabled: true` is set.
 - [ ] Tiles include `notes` for metric definitions where appropriate.
 - [ ] Large dashboards are organized into `tabs`.
 - [ ] HTML section headers and navigation menus are implemented.

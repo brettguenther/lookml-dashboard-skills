@@ -15,7 +15,7 @@ Type: `list of CFRule objects`
 | `stringValue` | `string` | Comparison string value (used for string operators like 'contains', 'starts with'). |
 | `fields` | `list of strings` | List of field names (e.g. `["orders.count"]`) this rule applies to. If empty, applies based on `apply_to`. |
 | `apply_to` | `string (one of: 'selectFields', 'allNumericFields', 'allStringFields')` | Determines target fields for the rule. |
-| `apply_formatting_to_row` | `boolean (yes/no)` | If yes, highlights entire row. If no, highlights individual cell. |
+| `apply_formatting_to_row` | `boolean (true/false)` | If true, highlights entire row. If false, highlights individual cell. |
 | `cell_format` | `CFStyle map/object` | Formatting style applied to individual cell. |
 | `row_format` | `CFStyle map/object` | Formatting style applied to entire row. |
 
@@ -25,7 +25,7 @@ Type: `list of CFRule objects`
 | :--- | :--- | :--- |
 | `background_color` | `string` | Background color hex code (e.g., `"#1A73E8"`). |
 | `font_color` | `string` | Font color hex code. |
-| `font_style` | `map/object` | Font style toggles: `bold` (boolean), `italic` (boolean), `strikethrough` (boolean). |
+| `font_style` | `map/object` | Font style toggles: `bold` (boolean `true/false`), `italic` (boolean `true/false`), `strikethrough` (boolean `true/false`). |
 | `color_application` | `map/object` | Theme color collection: `collection_id` (string), `palette_id` (string), `options` (map with `mirror`, `reverse`, `stepped`). |
 
 ## Concrete YAML Example
@@ -37,12 +37,12 @@ conditional_formatting:
     fields:
       - orders.count
     apply_to: selectFields
-    apply_formatting_to_row: no
+    apply_formatting_to_row: false
     cell_format:
       background_color: "#F3F3F3"
       font_color: "#FF0000"
       font_style:
-        bold: yes
-        italic: no
-        strikethrough: no
+        bold: true
+        italic: false
+        strikethrough: false
 ```

@@ -7,9 +7,9 @@ Use this template as a starting point for any new LookML dashboard. it incorpora
   title: "Dashboard Title"
   description: "A concise description of the dashboard's purpose and target persona."
   preferred_viewer: dashboards-next
+  style: modern
   layout: newspaper
   query_timezone: user_timezone
-  crossfilter_enabled: true
   
   # 1. Organization: Tabs
   tabs:
@@ -48,7 +48,7 @@ Use this template as a starting point for any new LookML dashboard. it incorpora
       width: 24
       height: 3
 
-    # 4. KPI Row (with Comparisons)
+    # 4. KPI Row (with Comparisons) - NOTE: KPIs (single_value) do NOT take modern2026
     - title: "Total Revenue"
       name: revenue_kpi
       model: your_model
@@ -70,12 +70,13 @@ Use this template as a starting point for any new LookML dashboard. it incorpora
       width: 6
       height: 4
 
-    # 5. Trend Tile (with Monotone Interpolation & Dual Axis)
+    # 5. Trend Tile (with Monotone Interpolation, Dual Axis & modern2026)
     - title: "Revenue vs Conversion Rate"
       name: revenue_trend
       model: your_model
       explore: your_explore
       type: looker_line
+      modern2026: true
       fields: [date_month, revenue_measure, conversion_rate_measure]
       interpolation: monotone
       point_style: circle_outline
@@ -92,12 +93,13 @@ Use this template as a starting point for any new LookML dashboard. it incorpora
       width: 18
       height: 8
 
-    # 6. Detailed Data Grid (with Cell Viz)
+    # 6. Detailed Data Grid (with Cell Viz & modern2026)
     - title: "Top Performing Segments"
       name: segment_table
       model: your_model
       explore: your_explore
       type: looker_grid
+      modern2026: true
       fields: [segment_dimension, revenue_measure, orders_count]
       series_cell_visualizations:
         revenue_measure:
