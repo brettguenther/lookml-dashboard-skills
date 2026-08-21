@@ -14,6 +14,7 @@ This reference provides exact visualization configuration options for Table and 
 | `header_font_size` | `string (e.g. 'medium', 'small', 'large')` | `Header Font Size` | Font size configuration for header row |
 | `header_text_alignment` | `string (one of: 'left', 'center', 'right')` | `Header Alignment` | Text alignment for header text |
 | `minimum_column_width` | `number` | `Minimum Column Width` | Minimum width in pixels for table columns |
+| `modern2026` | `boolean (yes/no)` | `Modern 2026 Engine` | Enable modern 2026 visualization rendering (default: `true`) |
 | `row_groups.configurable_subtotals` | `boolean (yes/no)` | `Show Subtotal Row` | Display subtotal calculation rows for grouped rows |
 | `row_groups.default_display_level` | `number` | `Default Display Level` | Default expansion depth level for grouped rows |
 | `row_groups.enabled` | `boolean (yes/no)` | `Enable Row Groups` | Enable collapsible row grouping |

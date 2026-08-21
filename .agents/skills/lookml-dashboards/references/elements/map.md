@@ -2,6 +2,9 @@
 
 This reference provides exact visualization configuration options for Map chart elements in LookML dashboards.
 
+> [!NOTE]
+> Map visualization elements (`looker_map`, `looker_geo_choropleth`, etc.) do **not** use `modern2026: true`.
+
 ## Options Reference Table
 
 | Option Key / Path | Type | Label | Description |

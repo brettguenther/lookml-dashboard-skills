@@ -6,4 +6,5 @@ This reference provides exact visualization configuration options for Single Rec
 
 | Option Key / Path | Type | Label | Description |
 | :--- | :--- | :--- | :--- |
+| `modern2026` | `boolean (yes/no)` | `Modern 2026 Engine` | Enable modern 2026 visualization rendering (default: `true`) |
 | `show_view_names` | `boolean (yes/no)` | `Show Full Field Name` | Toggle controlling visibility of full field names in labels |

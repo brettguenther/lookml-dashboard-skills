@@ -7,7 +7,8 @@ This reference summarizes the key parameters used to build high-quality dashboar
 | :--- | :--- | :--- |
 | `layout: newspaper` | 24-column grid layout. | **Mandatory** for professional dashboards. |
 | `preferred_viewer` | Viewer engine. | Use `dashboards-next` for the modern experience. |
-| `crossfilter_enabled` | Enables click-to-filter. | Set to `true` for interactive analytics. |
+| `style` | Dashboard styling theme. | Set to `modern` as default for all dashboards. |
+| `crossfilter_enabled` | Enables click-to-filter. | Default is disabled. Only set to `true` when explicitly requested. |
 | `auto_run` | Execution behavior. | Set to `false` if the dashboard has >15 heavy tiles. |
 | `filters_bar_collapsed` | Initial filter state. | Set to `true` to focus on data first. |
 | `filters_location_top` | Filter bar placement. | Set to `false` to move filters to the right sidebar. |
@@ -18,6 +19,7 @@ This reference summarizes the key parameters used to build high-quality dashboar
 | Parameter | Description | Best Practice |
 | :--- | :--- | :--- |
 | `type` | Visualization type. | Match type to the question (e.g., `looker_area` for trends). |
+| `modern2026` | Modern 2026 visualization engine. | Set to `true` by default for all visualization types EXCEPT KPI (`single_value`) and maps. |
 | `width` / `height` | Tile dimensions. | Use standard sizes (KPIs: 4x4, Trends: 12x8). |
 | `row` / `col` | Tile position. | Maintain clear horizontal and vertical alignment. |
 | `tab_name` | Tab assignment. | Must match a name defined in the top-level `tabs`. |

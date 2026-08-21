@@ -22,6 +22,7 @@ This reference provides exact visualization configuration options for Cartesian 
 | `label_rotation` | `number` | `Value Rotation` | Rotation angle in degrees for axis labels |
 | `label_value_format` | `string` | `Value Format` | Value format string pattern for data point labels |
 | `legend_position` | `string (one of: 'left', 'center', 'right')` | `Legend Alignment` | Alignment position of the legend |
+| `modern2026` | `boolean (yes/no)` | `Modern 2026 Engine` | Enable modern 2026 visualization rendering (default: `true`) |
 | `point_style` | `string (one of: 'none', 'circle', 'circle_outline')` | `Point Style` | Marker style for points on line, area, and scatter charts |
 | `quadrant_properties.[i].color` | `string` | `Color` | Hex color code for a specific quadrant background |
 | `quadrant_properties.[i].label` | `string` | `Label` | Text label for a specific quadrant |

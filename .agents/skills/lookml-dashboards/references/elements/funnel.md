@@ -14,6 +14,7 @@ This reference provides exact visualization configuration options for Funnel cha
 | `labelScale` | `number` | `Label Scale` | Scale multiplier for label font sizes |
 | `leftAxisLabel` | `string` | `Left Axis Label` | Custom text label for left axis |
 | `leftAxisLabelVisible` | `boolean (yes/no)` | `Label Left Axis` | Toggle visibility of left axis label |
+| `modern2026` | `boolean (yes/no)` | `Modern 2026 Engine` | Enable modern 2026 visualization rendering (default: `true`) |
 | `orientation` | `string (one of: 'vertical', 'horizontal')` | `Orientation` | Direction orientation of the funnel |
 | `percentPosition` | `string (one of: 'inline', 'hidden', 'left', 'right')` | `Percent Position` | Position of percentage display values |
 | `percentType` | `string (one of: 'prior_step', 'total')` | `Percent Type` | Calculate percentage relative to prior step or total baseline |

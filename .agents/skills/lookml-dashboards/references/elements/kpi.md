@@ -2,6 +2,9 @@
 
 This reference provides exact visualization configuration options for KPI elements in LookML dashboards.
 
+> [!NOTE]
+> KPI and Single Value visualization elements (`type: single_value`) do **not** use `modern2026: true`.
+
 ## Options Reference Table
 
 | Option Key / Path | Type | Label | Description |
