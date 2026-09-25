@@ -1,6 +1,6 @@
 # Advanced HTML & Markdown for Looker Dashboards
 
-High-quality dashboards (like Looker's SaaS Pulse) use HTML within `type: text` tiles to achieve custom branding and improved navigation.
+High-quality dashboards use HTML within `type: text` tiles to achieve custom branding and improved navigation.
 
 ## 1. High-Impact Headers
 Use these for section breaks to create a professional, "app-like" feel.

@@ -1,0 +1,9 @@
+{
+  "name": "lookml-dashboard-skills",
+  "version": "1.0.0",
+  "description": "Production-grade LookML Dashboard skills and validation for AI coding agents",
+  "author": "Brett Guenther",
+  "skills": [
+    "./skills/lookml-dashboards"
+  ]
+}
