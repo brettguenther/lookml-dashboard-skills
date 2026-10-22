@@ -1,14 +1,15 @@
 ---
 name: "lookml-dashboards"
 description: >-
-  Designs, scaffolds, and optimizes LookML dashboards (.dashboard.lookml) on a
-  24-column newspaper grid. Covers visual hierarchy, tabbed layouts, KPI scorecard
-  cards, dynamic_fields (table calculations, custom dimensions, and custom measures),
-  dual-axis mixed charts, looker_google_map parameters, ui_config filter bars,
-  and rendering validation. Use when creating, editing, styling, refactoring, or
-  auditing LookML dashboard YAML files. Don't use for LookML views/explores modeling
-  (use lookml-view or lookml-explore) or React host application embedding code
-  (use sso-embed).
+  Designs, scaffolds, and optimizes LookML dashboards (.dashboard.lookml) on
+  24-column or granular 72-column newspaper grids. Covers visual hierarchy,
+  tabbed layouts, KPI scorecard cards, bullet charts (looker_bullet), histograms
+  (looker_histogram), dynamic_fields (table calculations, custom dimensions, and
+  custom measures), dual-axis mixed charts, looker_google_map parameters, global
+  and tile-level filters (vis_filter: true, tile_filter_information), and rendering
+  validation. Use when creating, editing, styling, refactoring, or auditing LookML
+  dashboard YAML files. Don't use for LookML views/explores modeling (use lookml-view
+  or lookml-explore) or React host application embedding code (use sso-embed).
 ---
 
 # LookML Dashboard Best Practices
@@ -20,6 +21,8 @@ For element-specific options and technical details, see the reference guides:
 - **Core References**: [Dashboard Parameter Reference](references/dashboard_parameters.md) | [Dynamic Fields (Custom Measures, Dimensions & Calcs)](references/dynamic_fields.md) | [Boilerplate Template](references/boilerplate_dashboard.md) | [Markdown & HTML Templates](references/markdown_html_templates.md)
 - **Element Visualization Parameter References**:
   - [Single Value / KPI (`single_value`)](references/elements/single_value.md) *(Default for all KPI cards)*
+  - [Bullet Chart (`looker_bullet`)](references/elements/bullet.md) *(Actual vs target goal & qualitative threshold bands)*
+  - [Histogram (`looker_histogram`)](references/elements/histogram.md) *(Continuous frequency / percent bucket distributions)*
   - [Google Maps (`looker_google_map`)](references/elements/map.md) *(Default for all maps)*
   - [Cartesian (Line, Bar, Column, Area, Scatter, Waterfall, Boxplot)](references/elements/cartesian.md)
   - [Table & Grid (`looker_grid`)](references/elements/table.md)
@@ -36,11 +39,13 @@ For element-specific options and technical details, see the reference guides:
 
 ## 1. Dashboard Layout and Structure
 
-- **Dashboard-Level Parameters**: Always include `layout: newspaper`, `preferred_viewer: dashboards-next`, and `style: modern` as defaults.
+- **Dashboard-Level Parameters**: Always include `layout: newspaper`, `preferred_viewer: dashboards-next` (or `dashboards`), and `style: modern` as defaults. When tile-level filters (`vis_filter: true`) are present, set `tile_filter_information: show_all`. Optional `default_dashboard_agent: <agent_name>` binds a LookML-defined conversational analytics agent.
 - **Identifier Naming Guardrail (Strict)**: Looker's LookML compiler strictly forbids periods (`.`) inside element `name:` and filter `name:` identifiers.
-  - ✅ **Valid**: `name: revenue_vs_cost` or `name: "Revenue vs Cost"`
+  - ✅ **Valid**: `name: revenue_vs_cost` or `name: "Traffic Source - User Behaviors"`
   - ❌ **Invalid**: `name: "Revenue vs. Cost"` (crashes LookML compiler)
-- **Layout Method**: Standardize on `layout: newspaper`. It provides a 24-column grid for flexible element positioning.
+- **Layout Method & Grid Granularity (`layout_granularity`)**:
+  - **Default Grid (`layout: newspaper`)**: Uses a **24-column grid** (`rowHeight: 40`, min tile `width: 2`, `height: 1`). Use 24-column coordinates by default when authoring new dashboards.
+  - **Granular Grid (`layout_granularity: granular`)**: High-resolution **72-column newspaper grid** (`3x` horizontal scale, `2x` vertical scale; min tile `width: 6`, `height: 4`). When editing or exporting a dashboard with `layout_granularity: granular`, row widths sum to `72` (e.g., `col: 0, width: 35` + `col: 35, width: 37`) and heights double (`height: 16` = `8` standard rows). Never mix 24-col and 72-col coordinates in the same dashboard.
 - **Sectioning**: Use `type: text` elements as section headers to create a visual narrative (`width: 24`, `height: 3`).
 - **Visual Hierarchy**: Place high-level KPIs across the top row, followed by trend visualizations, and detailed breakdowns/tables at the bottom.
 - **Element Sizing & Row Height Alignment**:
@@ -156,8 +161,9 @@ Correlate different metric types (e.g., Sessions and Conversion Rate) in one til
 ## 6. Styling and Modern Engine Rules (`modern2026: true`)
 
 - **Modern 2026 Engine (`modern2026: true`)**:
-  - **Required on all supporting visualizations**: Cartesian charts (`looker_column`, `looker_bar`, `looker_line`, `looker_area`, `looker_scatter`, `looker_waterfall`, `looker_boxplot`, `looker_histogram`), modern table (`looker_grid`, `table`), funnel (`looker_funnel`), timeline (`looker_timeline`), and word cloud (`looker_wordcloud`). Set `modern2026: true` at the element level.
+  - **Required on all supporting visualizations**: Cartesian charts (`looker_column`, `looker_bar`, `looker_line`, `looker_area`, `looker_scatter`, `looker_waterfall`, `looker_boxplot`, `looker_histogram`), bullet charts (`looker_bullet`), modern table (`looker_grid`, `table`), funnel (`looker_funnel`), timeline (`looker_timeline`), and word cloud (`looker_wordcloud`). Set `modern2026: true` at the element level.
   - **Must be omitted on**: KPI (`single_value`), single record (`looker_single_record`), and maps (`looker_google_map`, `looker_geo_choropleth`, `looker_geo_coordinates`).
+  - **No Stale Cross-Type Properties**: Never carry over unrelated keys from another chart type (e.g., `bullet_*` keys on `looker_histogram`, or `show_value_labels` instead of `bullet_show_labels` on `looker_bullet`).
 - **Monotone Interpolation**: For line/area charts, use `interpolation: monotone` for a modern, smooth visual curve.
 - **Consistent Coloring**: Define `series_colors` for categorical dimensions so brand/entity colors remain consistent across all tiles.
 - **Advanced Grid Styling**:
@@ -184,13 +190,23 @@ See [Google Maps Parameter Reference](references/elements/map.md) for complete o
 
 ---
 
-## 8. Dashboard Filters
+## 8. Global & Tile-Scoped Dashboard Filters
 
-- **Filter Type**: Prefer `type: field_filter` for automatic suggestion dropdowns.
-- **UI Configuration (`ui_config`)**:
-  - `display: inline`: Use for **primary, high-impact filters** that establish baseline context (date ranges, primary dimension lookup).
-  - `display: popover`: Use for **secondary filters** to maintain an uncluttered top bar.
-  - Control types: `dropdown_menu` (long lists), `button_group` (2-4 items), `button_toggles` (binary Yes/No), `relative_timeframes` (primary dates), `advanced` (complex conditions).
+- **Global Filters**:
+  - Prefer `type: field_filter` for automatic suggestion dropdowns.
+  - `ui_config.display: inline`: Use for **primary, high-impact filters** that establish baseline context (date ranges, primary dimension lookup).
+  - `ui_config.display: popover`: Use for **secondary filters** to maintain an uncluttered top bar.
+  - Control types: `dropdown_menu` (long lists), `tag_list` (multi-select tags), `button_group` (2-5 items), `button_toggles` (binary Yes/No), `relative_timeframes` (primary dates), `advanced` (complex conditions).
+- **Filters on Tiles (`vis_filter: true` — Looker 26.22+)**:
+  - Render an interactive filter chip bar directly inside an individual visualization tile instead of filtering the entire dashboard:
+    1. Define the filter in top-level `filters:` with `vis_filter: true` (conventionally naming `name: "<Filter Title> - <Element Title>"` and short `title: "<Filter Title>"`, with no periods).
+    2. Bind it inside **only** that single target element's `listen:` map (`<filter_name>: <view.field>`).
+    3. Set `tile_filter_information: show_all` at the dashboard root (`'show_all'`, `'show_dashboard_only'`, or `'do_not_show'`; embedded dashboards also require instance setting `embed_show_tile_filter_information: true`).
+  - **Strict Compiler Rules (`HTDashboardValidator`)**:
+    - A `vis_filter: true` filter **must only be listened to by 1 query-based visualization element** (sharing across 2+ tiles is a LookML compiler error).
+    - **Must set `required: false`** (`required: true` is a compiler error).
+    - **Cannot cascade** (`listens_to_filters: []` or omit — listening to parent filters is a compiler error).
+    - **Must use `ui_config.display: popover`** (`display: inline` triggers a compiler warning).
 
 ---
 
@@ -211,12 +227,13 @@ Use `type: text` tiles for branding, subtitles, and section headers. See [Markdo
 
 ## 11. Dashboard Quality Checklist
 
-- [ ] Uses `newspaper` layout on a 24-column grid with `style: modern` and `preferred_viewer: dashboards-next`.
+- [ ] Uses `newspaper` layout (24-col default or consistent 72-col `layout_granularity: granular`) with `style: modern` and `preferred_viewer: dashboards-next`.
 - [ ] No periods (`.`) in any element `name` or filter `name` identifiers.
 - [ ] Every KPI card defaults to `type: single_value` (only use `single_record` if explicitly requested).
 - [ ] Maps default to `type: looker_google_map` (`looker_geo_*` used only if explicitly requested).
-- [ ] `modern2026: true` is set on all supporting visualizations (cartesian, grid/table, funnel, timeline, wordcloud).
+- [ ] `modern2026: true` is set on all supporting visualizations (cartesian, histogram, bullet, grid/table, funnel, timeline, wordcloud).
 - [ ] `modern2026` is omitted on `single_value`, `looker_single_record`, and map visualizations.
+- [ ] Any tile-scoped filter (`vis_filter: true`) uses `ui_config.display: popover`, `required: false`, `listens_to_filters: []`, binds to exactly 1 visualization element in `listen:`, and pairs with `tile_filter_information: show_all`.
 - [ ] If `tabs:` is defined, every element specifies `tab_name`, and each tab starts at `row: 0`.
 - [ ] All `y_axes` entries format `series` as a list of objects (`- id: field_name`), never raw strings.
 - [ ] Every Period-over-Period KPI has descending sort on the date dimension (`limit: 2`).

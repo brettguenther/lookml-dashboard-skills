@@ -9,6 +9,7 @@ Use this template as a production-grade starting point for any new LookML dashbo
   preferred_viewer: dashboards-next
   style: modern
   layout: newspaper
+  tile_filter_information: show_all
   query_timezone: user_timezone
   auto_run: true
   crossfilter_enabled: false
@@ -20,7 +21,7 @@ Use this template as a production-grade starting point for any new LookML dashbo
     - name: operational_details
       label: "Operational Details"
 
-  # 2. Global Filters (Notice: No periods in name identifiers)
+  # 2. Global & Tile-Scoped Filters (Notice: No periods in name identifiers)
   filters:
     - name: date_range
       title: "Date Range"
@@ -39,6 +40,22 @@ Use this template as a production-grade starting point for any new LookML dashbo
       ui_config:
         type: dropdown_menu
         display: popover
+
+    # Tile-scoped filter (vis_filter: true): popover only, required: false, bound to 1 tile
+    - name: "Traffic Source - Monthly Revenue Trend"
+      title: "Traffic Source"
+      type: field_filter
+      default_value: "Display,Email,Facebook,Organic,Search"
+      allow_multiple_values: true
+      required: false
+      model: your_model
+      explore: order_items
+      listens_to_filters: []
+      field: users.traffic_source
+      ui_config:
+        type: button_group
+        display: popover
+      vis_filter: true
 
   elements:
     # 3. Branding & Navigation Header Tile
@@ -168,6 +185,7 @@ Use this template as a production-grade starting point for any new LookML dashbo
       listen:
         date_range: orders.created_date
         product_category: products.category
+        Traffic Source - Monthly Revenue Trend: users.traffic_source
       tab_name: executive_summary
       row: 7
       col: 0
@@ -205,7 +223,64 @@ Use this template as a production-grade starting point for any new LookML dashbo
       width: 24
       height: 9
 
-    # 8. Operational Details Tab Grid (Reset row: 0 for new tab)
+    # 8. Operational Details Tab: Bullet SLA Goal & Order Amount Histogram (Reset row: 0 for new tab)
+    - title: "Days to Process SLA by Distribution Center"
+      name: days_to_process_bullet
+      model: your_model
+      explore: order_items
+      type: looker_bullet
+      modern2026: true
+      fields: [distribution_centers.name, order_items.average_days_to_process]
+      sorts: [order_items.average_days_to_process desc]
+      limit: 20
+      bullet_orientation: vertical
+      show_legend: false
+      bullet_range_limits_enabled: true
+      bullet_range_type: value
+      bullet_range_1: 1
+      bullet_range_2: 3
+      bullet_range_3: 5
+      bullet_range_colors: ["#DADCE0", "#BDC1C6", "#9AA0A6"]
+      bullet_show_target_marker: true
+      bullet_target_type: value
+      bullet_target: 4
+      bullet_target_color: "#E8710A"
+      bullet_target_width: "120%"
+      bullet_target_height: 5
+      listen:
+        date_range: orders.created_date
+        product_category: products.category
+      tab_name: operational_details
+      row: 0
+      col: 0
+      width: 12
+      height: 8
+
+    - title: "Order Amount Distribution (% Share)"
+      name: order_amount_histogram
+      model: your_model
+      explore: order_items
+      type: looker_histogram
+      modern2026: true
+      fields: [order_items.order_count, order_items.sale_price]
+      sorts: [order_items.order_count desc]
+      limit: 5000
+      binning_field: order_items.sale_price
+      x_axis_bin_label_format: interval
+      bin_range_format: to
+      y_axis_mode: percent
+      column_spacing_ratio: 0
+      column_group_spacing_ratio: 0
+      listen:
+        date_range: orders.created_date
+        product_category: products.category
+      tab_name: operational_details
+      row: 0
+      col: 12
+      width: 12
+      height: 8
+
+    # 9. Operational Details Tab Grid
     - title: "Product Category Breakdown"
       name: product_category_grid
       model: your_model
@@ -224,7 +299,7 @@ Use this template as a production-grade starting point for any new LookML dashbo
         date_range: orders.created_date
         product_category: products.category
       tab_name: operational_details
-      row: 0
+      row: 8
       col: 0
       width: 24
       height: 12
