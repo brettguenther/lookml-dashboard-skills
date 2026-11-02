@@ -21,6 +21,7 @@ MODERN2026_SUPPORTED = {
     'looker_waterfall',
     'looker_boxplot',
     'looker_histogram',
+    'looker_bullet',
     'looker_grid',
     'table',
     'looker_funnel',
@@ -36,7 +37,10 @@ MODERN2026_UNSUPPORTED = {
     'looker_geo_choropleth',
     'looker_geo_coordinates',
     'text',
+    'group',
 }
+
+VALID_COMPARISON_ROWS = {'first', 'second', 'last', 'total'}
 
 
 def validate_dashboard_dict(dash, filepath):
@@ -67,11 +71,16 @@ def validate_dashboard_dict(dash, filepath):
         errors.append(f"[{dash_name}] 'elements' must be a list of element objects.")
         return errors
 
+    distinct_explores = set()
+
     for idx, elem in enumerate(elements):
         if not isinstance(elem, dict):
             continue
         ename = elem.get('name') or elem.get('title') or f"element_{idx}"
         etype = elem.get('type')
+
+        if elem.get('model') and elem.get('explore'):
+            distinct_explores.add((str(elem['model']), str(elem['explore'])))
 
         # Check fatal period (.) in element name
         if elem.get('name') and '.' in str(elem['name']):
@@ -110,6 +119,32 @@ def validate_dashboard_dict(dash, filepath):
                     "Omit 'modern2026: true' to avoid rendering errors."
                 )
 
+        # Check looker_grid / table font sizes: string font sizes cause NaN (0px) row height when modern2026: true
+        if etype in ('looker_grid', 'table') and elem.get('modern2026'):
+            for font_key in ('rows_font_size', 'header_font_size'):
+                if font_key in elem and isinstance(elem[font_key], str):
+                    errors.append(
+                        f"[{dash_name} -> {ename}] '{font_key}: {elem[font_key]}' is a string on a modern2026 {etype}. "
+                        "String font sizes cause NaN (0px) row heights and render blank tables. Use a numeric pixel integer (e.g. 12)."
+                    )
+
+        # Check single_value comparison_row validity
+        if etype == 'single_value' and elem.get('show_comparison'):
+            comp_row = elem.get('comparison_row')
+            if comp_row is not None:
+                if not isinstance(comp_row, str) or comp_row not in VALID_COMPARISON_ROWS:
+                    errors.append(
+                        f"[{dash_name} -> {ename}] Invalid 'comparison_row: {comp_row}'. "
+                        f"Must be one of {sorted(VALID_COMPARISON_ROWS)} (use 'second' for Row 1 vs Row 2 PoP)."
+                    )
+                elif comp_row == 'first' and not elem.get('dynamic_fields'):
+                    sorts = elem.get('sorts') or []
+                    if any('desc' in str(s).lower() for s in sorts):
+                        errors.append(
+                            f"[{dash_name} -> {ename}] 'comparison_row: first' with descending sort and no dynamic_fields "
+                            "compares Row 1 against Row 1 (0% change). Set 'comparison_row: second' for Row 1 vs Row 2 PoP."
+                        )
+
         # Check y_axes series structure: series MUST be objects with 'id', not plain strings
         if 'y_axes' in elem and isinstance(elem['y_axes'], list):
             for axis_idx, y_axis in enumerate(elem['y_axes']):
@@ -123,6 +158,15 @@ def validate_dashboard_dict(dash, filepath):
                                     "It must be an object with an 'id' key (e.g. `{{id: '{s_entry}'}}`). "
                                     "Passing strings causes fatal frontend crash: \"Cannot create property 'id' on string\"."
                                 )
+
+    # 4. Check crossfilter_enabled across multiple explores
+    if dash.get('crossfilter_enabled') is True and len(distinct_explores) > 1:
+        explore_list = ", ".join(f"{m}.{e}" for m, e in sorted(distinct_explores))
+        errors.append(
+            f"[{dash_name}] 'crossfilter_enabled: true' is set on a dashboard querying multiple explores ({explore_list}). "
+            "This triggers Looker's 'Unable to cross-filter. Tiles from multiple explores have been added to this dashboard' warning banner. "
+            "Set 'crossfilter_enabled: false'."
+        )
 
     return errors
 

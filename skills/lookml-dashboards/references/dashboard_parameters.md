@@ -29,6 +29,7 @@
 | `width` / `height` | `integer` | Grid units (24-col grid)             | Standard sizes: KPIs (4x4 or 6x4), Trends (12x8 to 24x8), Tables/Grids (24x10).                                                                                                                    |
 | `row` / `col`      | `integer` | 24-column coordinates                | Maintain row alignment. If `tabs:` is used, reset `row: 0` at the start of each tab.                                                                                                               |
 | `tab_name`         | `string`  | Matches `tabs[*].name`               | Assigns element to a specific tab. Required when `tabs:` is defined.                                                                                                                               |
+| `group`            | `string`  | Matches parent `name`                | Binds child element to a parent `type: group` container element. Child coordinates (`row`, `col`) become relative to the group container.                                                       |
 | `listen`           | `map`     | `filter_name: field_name`            | Maps global dashboard filters to element query fields.                                                                                                                                             |
 | `dynamic_fields`   | `list`    | Custom fields & calcs                | Defines table calculations, custom dimensions, and custom measures (see [Dynamic Fields Reference](dynamic_fields.md)).                                                                            |
 | `note`             | `map`     | `note_display: hover`                | Inline metric definition documentation. Use `note_state: collapsed` and `note_display: hover`.                                                                                                     |
@@ -58,6 +59,7 @@
 | **Funnel**             | `looker_funnel`          | Multi-step dropoff conversion              | ✅ **Required (`modern2026: true`)** |
 | **Timeline**           | `looker_timeline`        | Events & duration blocks                   | ✅ **Required (`modern2026: true`)** |
 | **Word Cloud**         | `looker_wordcloud`       | Keyword density                            | ✅ **Required (`modern2026: true`)** |
+| **Tile Group**         | `group`                  | Visual container grouping child tiles      | ❌ **Omit** (non-queryable container) |
 
 ---
 
@@ -149,4 +151,68 @@ y_axes:
   - label: "Total Revenue"
     orientation: left
     series: [order_items.total_sale_price]
+```
+
+---
+
+## 6. Dashboard Tile Groups (`type: group` & `group:`)
+
+Dashboard Tile Groups allow organizing multiple related cards (scorecard KPIs, chart pairs, or tables) into a unified visual container box with an optional header banner and subtitle.
+
+### Key Rules & Invariants
+
+1. **Relative Internal Coordinates**: Child elements that belong to a group (`group: <group_container_name>`) use **relative coordinates** (`row`, `col`) positioned from `0, 0` inside the group container box.
+2. **Container Height Bounds**: The parent group container's `height` must be large enough to enclose all child elements (`container_height >= header_height + max_child_bottom`).
+3. **Tab Scoping**: A child element and its parent `type: group` container **must reside on the same tab** (`tab_name`).
+4. **No Nested Groups**: A child element cannot itself be a `type: group` container.
+5. **No Periods in Names**: The group `name` cannot contain periods (`.`).
+
+### Syntax Example
+
+```yaml
+elements:
+  # 1. Group Container Element
+  - name: executive_kpi_group
+    type: group
+    title: "Executive Scorecard KPIs"
+    subtitle_text: "Topline business health and volume metrics"
+    title_hidden: false
+    row: 0
+    col: 0
+    width: 24
+    height: 6
+
+  # 2. Child Elements (using relative coordinates inside executive_kpi_group)
+  - name: total_revenue_kpi
+    group: executive_kpi_group          # Links to parent group container name
+    type: single_value
+    model: thelook
+    explore: order_items
+    fields: [order_items.total_sale_price]
+    row: 0                              # Top-left inside group
+    col: 0
+    width: 8
+    height: 4
+
+  - name: total_orders_kpi
+    group: executive_kpi_group
+    type: single_value
+    model: thelook
+    explore: order_items
+    fields: [order_items.count]
+    row: 0
+    col: 8
+    width: 8
+    height: 4
+
+  - name: average_sale_price_kpi
+    group: executive_kpi_group
+    type: single_value
+    model: thelook
+    explore: order_items
+    fields: [order_items.average_sale_price]
+    row: 0
+    col: 16
+    width: 8
+    height: 4
 ```

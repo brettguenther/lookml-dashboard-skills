@@ -14,7 +14,7 @@ description: >-
 
 # LookML Dashboard Best Practices
 
-This skill distills the architectural requirements and visual standards for creating production-grade LookML dashboards.
+This skill distills the architectural requirements and visual standards for creating production-grade LookML dashboards. It is built to take advantage of all preview visualization and dashboard features available in Looker (`modern2026: true`, tile-scoped filters `vis_filter: true`, granular 72-column layout grids `layout_granularity: granular`, dashboard tile groups `type: group`, table hierarchy `row_groups` / `table_column_groups`, `looker_bullet`, and `looker_histogram`), with the expectation that these preview features are enabled in your Looker environment.
 
 For element-specific options and technical details, see the reference guides:
 
@@ -79,10 +79,11 @@ Tabs organize complex dashboards into logical sections (e.g., "Executive Summary
 - **Default Visualization Type**: **Always default to `type: single_value`** for KPI scorecard tiles, headline metrics, and summary numbers.
 - **Single Record Constraint**: `type: looker_single_record` (or `single_record`) displays a single entity's raw field-value list and must **only be used when the user explicitly requests single record inspection**.
 - **Engine Flag**: `type: single_value` and `type: looker_single_record` do **NOT** use `modern2026: true`. Omit this flag on all single value elements.
-- **Comparison Types**:
-  - `comparison_type: change`: Best for Period-over-Period (YoY, WoW) analysis.
-  - `comparison_type: progress_percentage`: Best for tracking against linear goals.
-- **PoP Sorting Prerequisite**: When calculating Period-over-Period change via `offset(${measure}, 1)`, **always sort the date dimension in descending order** (`sorts: [orders.created_month desc]`) with `limit: 2` so `offset(..., 1)` references the earlier period.
+- **Comparison Types & Native Row-over-Row PoP**:
+  - `comparison_type: change_percentage` or `change`: Best for Period-over-Period (MoM, YoY, WoW) analysis.
+  - `comparison_type: progress_percentage` or `progress`: Best for tracking against linear goals.
+  - **Native `comparison_row: second` (No Table Calc Needed)**: When a query returns `[timeframe_dim, measure]` sorted descending (`sorts: [orders.created_month desc]`, `limit: 2` or `limit: 13` with sparkline), Row 1 is the current period and Row 2 is the prior period. Configure `show_comparison: true`, `comparison_type: change_percentage`, `comparison_series: <view.measure>`, and `comparison_row: second` (string enum: `'first' | 'second' | 'last' | 'total'`). **Never set `comparison_row: first` when comparing the same measure sorted descending** (comparing Row 1 against Row 1 always renders `0%`).
+  - **Apples-to-Apples MTD Filtering**: When Row 1 is an incomplete current month (Month-to-Date), filter the KPI tile by an `is_mtd: "Yes"` dimension (`EXTRACT(DAY FROM date) <= EXTRACT(DAY FROM CURRENT_DATE())`) so Row 2 (prior month) and any multi-month sparkline compare equivalent elapsed days of each month.
 - **Reverse Colors**: Set `comparison_reverse_colors: true` for metrics where a decrease is positive (e.g., Wait Time, Bounce Rate).
 
 ---
@@ -216,23 +217,122 @@ Use `type: text` tiles for branding, subtitles, and section headers. See [Markdo
 
 ---
 
-## 10. Performance and Interactivity
+## 10. Dashboard Tile Groups (`type: group` & `group:`)
 
-- **Cross-Filtering**: Cross-filtering is **disabled by default**. Only set `crossfilter_enabled: true` when explicitly requested.
+Dashboard Tile Groups group multiple elements (e.g. scorecard KPIs, dual charts, or related tables) into a unified visual container box with an optional header banner and subtitle.
+
+### Compiler & Layout Invariants
+
+1. **Relative Internal Coordinates**: Child elements that belong to a group (`group: <group_container_name>`) specify coordinates (`row`, `col`) **relative to the inside of the group container** (starting at `0, 0`).
+2. **Container Height Bounds**: The parent group container's `height` must be large enough to enclose all child elements (`container_height >= header_height + max_child_bottom`).
+3. **Tab Scoping**: A child element and its parent `type: group` container **must reside on the same tab** (`tab_name`).
+4. **No Nested Groups**: A child element cannot itself be a `type: group` container.
+5. **No Periods in Names**: The group `name` cannot contain periods (`.`).
+
+```yaml
+elements:
+  - name: kpi_summary_group
+    type: group
+    title: "Executive KPIs (Tile Group Container)"
+    subtitle_text: "Topline business performance indicators"
+    title_hidden: false
+    row: 0
+    col: 0
+    width: 24
+    height: 6
+
+  - name: revenue_kpi
+    group: kpi_summary_group            # Links to parent group container name
+    type: single_value
+    model: thelook
+    explore: order_items
+    fields: [order_items.total_sale_price]
+    row: 0                              # Relative row inside container
+    col: 0                              # Relative col inside container
+    width: 8
+    height: 4
+```
+
+---
+
+## 11. Table Hierarchy Grouping & Collapsible Columns
+
+Modern `looker_grid` / `table` visualizations (`modern2026: true`) support multi-level collapsible row trees, per-hierarchy tier styling, and multi-column grouping banners:
+
+### Key Rules & Invariants
+
+1. **Row Hierarchy (`row_groups`)**:
+   - `row_grouping_fields: [dim_parent, dim_child]`: Ordered list of dimension field names collapsed into the tree hierarchy auto-column.
+   - `default_display_level`: Must be one of `'collapsed'`, `'top_expanded'`, or `'all_expanded'`.
+   - `show_grouped_columns: false`: Merges dimensions into the auto-column tree and hides redundant separate columns.
+   - **Mutual Exclusivity**: `row_groups.enabled: true` is **disabled if pagination is active (`table_enable_pagination: true`) or sparklines are active (`table_sparklines.enabled: true`)**.
+   - **Subtotal Rollup Semantics**: When `configurable_subtotals: true`, AG Grid calculates client-side subtotals **only for `sum` and `count` measures**. Averages and complex measures render blank to prevent mathematically invalid rollups.
+   - **Per-Tier Styling**: Applying `series_text_format.<dimension_name>` to any grouped dimension in `row_grouping_fields` styles **that exact hierarchy depth tier** in the tree auto-column.
+2. **Column Groups (`table_column_groups`)**:
+   - Creates multi-tier parent header banners across multiple child columns.
+   - **Mutual Exclusivity**: Column groups are **disabled when query `pivots` are present or `transpose: true`**.
+
+```yaml
+vis_config:
+  type: looker_grid
+  modern2026: true
+  header_font_size: 12                  # Must be integer pixels, NOT string
+  rows_font_size: 12                    # Must be integer pixels, NOT string
+  row_groups:
+    enabled: true
+    row_grouping_fields:
+      - products.department             # Level 0 (outer tree node)
+      - products.category               # Level 1 (nested child node)
+    default_display_level: all_expanded # 'collapsed' | 'top_expanded' | 'all_expanded'
+    group_column_header: "Merchandising Hierarchy"
+    show_group_counts: true             # Shows '(N)' child row counts
+    configurable_subtotals: true        # Client-side rollup on sum/count measures
+    show_grouped_columns: false
+  table_column_groups:
+    enabled: true
+    defaultDisplayState: expanded
+    namespaceCsvHeaders: true
+    groups:
+      - id: fulfillment_volume
+        title: "Fulfillment & Volume"
+        columns: [order_items.status, order_items.count]
+        defaultDisplayState: expanded
+        collapsedVisibleColumns: [order_items.count]
+        headerBackgroundColor: "#1a73e8"
+        headerTextColor: "#ffffff"
+  series_text_format:
+    products.department:                # Styles Level 0 nodes
+      bold: true
+      fg_color: "#174ea6"
+      bg_color: "#e8f0fe"
+    products.category:                  # Styles Level 1 nodes
+      bold: true
+      fg_color: "#0d652d"
+      bg_color: "#e6f4ea"
+```
+
+---
+
+## 12. Performance and Interactivity
+
+- **Cross-Filtering (`crossfilter_enabled`)**: Cross-filtering is **disabled by default** (`crossfilter_enabled: false`). Only set `crossfilter_enabled: true` when explicitly requested **AND** 100% of query tiles on the dashboard reference the **exact same `(model, explore)` pair**. Enabling `crossfilter_enabled: true` on a multi-explore dashboard triggers Looker's `"Unable to cross-filter. Tiles from multiple explores have been added to this dashboard."` warning banner.
 - **Tile Notes**: Provide metric definitions using `note_state: collapsed` and `note_display: hover`.
 - **Auto Run**: Set `auto_run: false` for dashboards with >15 heavy analytical tiles.
 - **Query Timezone**: Always use `query_timezone: user_timezone`.
 
 ---
 
-## 11. Dashboard Quality Checklist
+## 13. Dashboard Quality Checklist
 
 - [ ] Uses `newspaper` layout (24-col default or consistent 72-col `layout_granularity: granular`) with `style: modern` and `preferred_viewer: dashboards-next`.
 - [ ] No periods (`.`) in any element `name` or filter `name` identifiers.
 - [ ] Every KPI card defaults to `type: single_value` (only use `single_record` if explicitly requested).
 - [ ] Maps default to `type: looker_google_map` (`looker_geo_*` used only if explicitly requested).
 - [ ] `modern2026: true` is set on all supporting visualizations (cartesian, histogram, bullet, grid/table, funnel, timeline, wordcloud).
-- [ ] `modern2026` is omitted on `single_value`, `looker_single_record`, and map visualizations.
+- [ ] `modern2026` is omitted on `single_value`, `looker_single_record`, `type: group`, and map visualizations.
+- [ ] Any `type: group` element defines container `width` and `height`, and all child elements specify `group: <group_name>` using relative `row` and `col` coordinates (starting at `0, 0` inside the container).
+- [ ] Any table with `row_groups.enabled: true` specifies `row_grouping_fields: [...]`, uses `'collapsed' | 'top_expanded' | 'all_expanded'` for `default_display_level`, sets integer pixel font sizes (`header_font_size: 12`, `rows_font_size: 12`), and omits pagination and sparklines.
+- [ ] Any table with `table_column_groups.enabled: true` omits query `pivots` and `transpose: true`.
 - [ ] Any tile-scoped filter (`vis_filter: true`) uses `ui_config.display: popover`, `required: false`, `listens_to_filters: []`, binds to exactly 1 visualization element in `listen:`, and pairs with `tile_filter_information: show_all`.
 - [ ] If `tabs:` is defined, every element specifies `tab_name`, and each tab starts at `row: 0`.
 - [ ] All `y_axes` entries format `series` as a list of objects (`- id: field_name`), never raw strings.

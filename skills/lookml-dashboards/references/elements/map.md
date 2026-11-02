@@ -130,3 +130,39 @@ In Looker dashboards, **always default to `type: looker_google_map`** for geogra
   width: 24
   height: 9
 ```
+
+---
+
+## `looker_geo_choropleth` Custom GeoJSON/TopoJSON, Southern Hemisphere (`mercator`) Projection, & GCS CORS Rules
+
+When `type: looker_geo_choropleth` is explicitly requested (e.g., for Australian states/territories, APAC regions, or custom administrative boundaries):
+
+1. **Southern Hemisphere / Non-US Projection (`map_projection: "mercator"`)**:
+   - Looker's default `"albers"` projection uses US standard parallels and severely warps Southern Hemisphere (e.g., Australia) and global geometries vertically.
+   - **Always set `map_projection: "mercator"`** (or `"equirectangular"`) for Australia, APAC, or any non-US choropleth tile.
+2. **Element-Level `map_url` (GeoJSON) vs Model-Level `map_layer:` (TopoJSON)**:
+   - **Direct Element-Level `map_url` (`type: looker_geo_choropleth`)**: Supports raw **GeoJSON** (`FeatureCollection`) via `map_url: "https://storage.googleapis.com/<bucket>/<file>.geojson"`, `map_property_key: "<CODE_PROP>"` (matching the dimension's values, e.g., `"STATE_CODE"`), and `map_property_label_key: "<NAME_PROP>"` (e.g., `"STATE_NAME"`). **Omit `map_object_key`** when pointing `map_url` at a GeoJSON file (`map_object_key` is only used for TopoJSON `objects.<key>`).
+   - **LookML Model-Level `map_layer:`**: Strictly requires `format: topojson` (Looker's LookML parser throws HTTP `422` on `format: geojson`). When using a model `map_layer:`, bind the LookML dimension via `map_layer_name: <layer_name>` and set `map: auto` on the dashboard tile.
+3. **GCS Bucket CORS Requirement for `map_url`**:
+   - Looker renders `looker_geo_choropleth` client-side in the user's browser and fetches `map_url` via `fetch()` (`Origin: https://<looker-host>`).
+   - Any Google Cloud Storage bucket serving `map_url` **MUST** have a CORS policy allowing `GET`, `HEAD`, `OPTIONS` on `origin: ["*"]` with `responseHeaders: ["Content-Type", "Access-Control-Allow-Origin"]`, otherwise the tile fails in the browser with `"Error while loading map: [CORS error]"`.
+
+```yaml
+- name: australia_jurisdiction_choropleth
+  title: "Sales by Australian State & Territory"
+  model: thelook
+  explore: order_items
+  type: looker_geo_choropleth
+  fields: [users.state_code, order_items.total_sale_price]
+  sorts: [order_items.total_sale_price desc]
+  limit: 20
+  map: custom
+  map_url: "https://storage.googleapis.com/my-public-maps-bucket/au_states.geojson"
+  map_property_key: "STATE_CODE"
+  map_property_label_key: "STATE_NAME"
+  map_projection: "mercator"
+  quantize_colors: false
+  colors: ["#E8F0FE", "#4285F4", "#185ABC", "#0D47A1"]
+  empty_color: "#F1F3F4"
+  show_view_names: false
+```

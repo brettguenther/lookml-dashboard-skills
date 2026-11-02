@@ -97,3 +97,14 @@ This reference provides exact visualization configuration options for Cartesian 
    series_labels:
      orders.count: "Total Orders"
    ```
+
+---
+
+## Highcharts `advanced_vis_config`, Multi-Axis (`y_axes`), & `stacking: percent` Guardrails
+
+1. **Never Combine Fixed `chart.marginBottom` with `legend.verticalAlign: "bottom"`**:
+   - In Highcharts `advanced_vis_config`, setting a fixed `"chart": {"marginBottom": <px>}` alongside `"legend": {"verticalAlign": "bottom"}` forces rotated X-axis category labels and the legend into the same bottom margin box, causing text overlap. Omit `marginBottom` so Highcharts dynamically reserves space below the X-axis labels.
+2. **3+ Measures with `y_axis_combined: false`**:
+   - When plotting 3 or more measures with `y_axis_combined: false`, always explicitly bind every measure in `y_axes[*].series` to either the `left` or `right` axis so Looker does not auto-create 3+ separate Y-axes.
+3. **`stacking: percent` + `label_value_format` Double-Scaling Bug**:
+   - Never set `label_value_format: "0.00%"` on a `stacking: percent` chart — Highcharts already scales percent-stacked values to `0..100`, so a `%` format string multiplies by `100` a second time (`50.90%` renders as `5090.00%`). Leave `label_value_format` unset or use `"0.0\"%\""`.
