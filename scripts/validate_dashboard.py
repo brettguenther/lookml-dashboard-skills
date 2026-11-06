@@ -10,6 +10,7 @@ Omit stylistic constraints — only checks conditions expected to break renderin
 import sys
 import os
 import argparse
+import re
 import yaml
 
 MODERN2026_SUPPORTED = {
@@ -27,6 +28,8 @@ MODERN2026_SUPPORTED = {
     'looker_funnel',
     'looker_timeline',
     'looker_wordcloud',
+    'looker_pie',
+    'looker_donut_multiples',
 }
 
 MODERN2026_UNSUPPORTED = {
@@ -41,11 +44,43 @@ MODERN2026_UNSUPPORTED = {
 }
 
 VALID_COMPARISON_ROWS = {'first', 'second', 'last', 'total'}
+PREFERRED_SLUG_RE = re.compile(r"^[A-Za-z0-9_-]{10,50}$")
+LEGACY_YES_NO_RE = re.compile(
+    r"^\s*(modern2026|crossfilter_enabled|show_comparison|comparison_reverse_colors|"
+    r"title_hidden|allow_multiple_values|required|show_view_names|show_row_numbers|"
+    r"transpose|truncate_text|enable_conditional_formatting|stacking_enabled)\s*:\s*(yes|no)\s*$",
+    re.MULTILINE | re.IGNORECASE,
+)
 
 
 def validate_dashboard_dict(dash, filepath):
     errors = []
     dash_name = dash.get('dashboard') or dash.get('title') or 'unnamed_dashboard'
+
+    # Check top-level dashboard ID
+    dash_id = dash.get('dashboard')
+    if not dash_id:
+        errors.append(
+            f"[{dash_name}] Missing required top-level 'dashboard: <snake_case_id>'. "
+            "Looker API POST /api/4.0/dashboards/lookml fails with HTTP 422 'dashboard is required' without it."
+        )
+    elif '.' in str(dash_id) or ' ' in str(dash_id):
+        errors.append(
+            f"[{dash_name}] Top-level 'dashboard: {dash_id}' must be snake_case/slug-safe (no spaces or periods)."
+        )
+
+    # Check top-level slug vs preferred_slug
+    if 'slug' in dash:
+        errors.append(
+            f"[{dash_name}] Top-level 'slug:' is invalid in LookML dashboards and causes HTTP 422 on import. "
+            "Remove 'slug:' and set 'preferred_slug:' instead."
+        )
+    preferred_slug = dash.get('preferred_slug')
+    if preferred_slug and not PREFERRED_SLUG_RE.match(str(preferred_slug)):
+        errors.append(
+            f"[{dash_name}] Invalid 'preferred_slug: {preferred_slug}'. "
+            "Must match ^[A-Za-z0-9_-]{10,50}$ (10 to 50 chars, letters/digits/hyphens/underscores only)."
+        )
     
     # 1. Check declared tabs
     declared_tabs = set()
@@ -54,11 +89,14 @@ def validate_dashboard_dict(dash, filepath):
             if isinstance(tab, dict) and 'name' in tab:
                 declared_tabs.add(tab['name'])
 
-    # 2. Check filters for fatal period (.) in name
+    # 2. Check filters for fatal period (.) in name and collect declared filter names
+    declared_filters = set()
     if 'filters' in dash and isinstance(dash['filters'], list):
         for f in dash['filters']:
             if isinstance(f, dict):
                 fname = f.get('name', '')
+                if fname:
+                    declared_filters.add(str(fname))
                 if '.' in str(fname):
                     errors.append(
                         f"[{dash_name}] Filter name '{fname}' contains a period ('.'). "
@@ -72,6 +110,7 @@ def validate_dashboard_dict(dash, filepath):
         return errors
 
     distinct_explores = set()
+    max_cols = 72 if (dash.get('layout_granularity') == 'granular' or dash.get('col_width') == 15) else 24
 
     for idx, elem in enumerate(elements):
         if not isinstance(elem, dict):
@@ -88,6 +127,23 @@ def validate_dashboard_dict(dash, filepath):
                 f"[{dash_name} -> {ename}] Element name '{elem['name']}' contains a period ('.'). "
                 "Looker LookML compiler crashes on periods in element names."
             )
+
+        # Check grid layout geometry
+        for g_key in ('row', 'col', 'width', 'height'):
+            g_val = elem.get(g_key)
+            if g_val is None or not isinstance(g_val, int) or g_val < 0:
+                errors.append(
+                    f"[{dash_name} -> {ename}] Missing or invalid '{g_key}: {g_val}'. "
+                    "Every element must specify non-negative integer row, col, width, and height."
+                )
+        col = elem.get('col')
+        width = elem.get('width')
+        if isinstance(col, int) and isinstance(width, int):
+            if width <= 0 or col + width > max_cols:
+                errors.append(
+                    f"[{dash_name} -> {ename}] Invalid {max_cols}-column geometry: col={col}, width={width} "
+                    f"(col + width = {col + width} > {max_cols})."
+                )
 
         # Check tab assignment if dashboard declares tabs
         if declared_tabs:
@@ -159,6 +215,16 @@ def validate_dashboard_dict(dash, filepath):
                                     "Passing strings causes fatal frontend crash: \"Cannot create property 'id' on string\"."
                                 )
 
+        # Check listen filter references against declared filters
+        listen = elem.get('listen')
+        if isinstance(listen, dict) and declared_filters:
+            for filter_ref in listen.keys():
+                if str(filter_ref) not in declared_filters:
+                    errors.append(
+                        f"[{dash_name} -> {ename}] 'listen' references undeclared filter '{filter_ref}' "
+                        f"(declared filters: {sorted(declared_filters)})."
+                    )
+
     # 4. Check crossfilter_enabled across multiple explores
     if dash.get('crossfilter_enabled') is True and len(distinct_explores) > 1:
         explore_list = ", ".join(f"{m}.{e}" for m, e in sorted(distinct_explores))
@@ -172,9 +238,18 @@ def validate_dashboard_dict(dash, filepath):
 
 
 def validate_file(filepath):
+    all_errors = []
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
-            content = yaml.safe_load(f)
+            raw_text = f.read()
+            for match in LEGACY_YES_NO_RE.finditer(raw_text):
+                key_name, bad_bool = match.group(1), match.group(2)
+                replacement = "true" if bad_bool.lower() == "yes" else "false"
+                all_errors.append(
+                    f"Legacy LookML boolean '{key_name}: {bad_bool}' detected in {filepath}. "
+                    f"Use YAML boolean '{key_name}: {replacement}' instead."
+                )
+            content = yaml.safe_load(raw_text)
     except Exception as e:
         return [f"YAML parse error in {filepath}: {e}"]
 
@@ -182,7 +257,6 @@ def validate_file(filepath):
         return [f"File {filepath} is empty."]
 
     dashboards = content if isinstance(content, list) else [content]
-    all_errors = []
     for dash in dashboards:
         if isinstance(dash, dict):
             all_errors.extend(validate_dashboard_dict(dash, filepath))

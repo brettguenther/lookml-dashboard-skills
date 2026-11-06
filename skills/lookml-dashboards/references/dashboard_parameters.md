@@ -6,6 +6,9 @@
 
 | Parameter                 | Type      | Recommended Value                   | Description                                                                                                                                                                   |
 | :------------------------ | :-------- | :---------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dashboard`               | `string`  | `snake_case` ID                     | **Mandatory** top-level dashboard identifier (no spaces or periods). Looker API `POST /api/4.0/dashboards/lookml` fails with HTTP `422` without it.                           |
+| `preferred_slug`          | `string`  | `^[A-Za-z0-9_-]{10,50}$`            | Deterministic alphanumeric slug for User-Defined Dashboard (UDD) imports so follow-up `import_dashboard_from_lookml` calls overwrite the dashboard in-place.                   |
+| `slug`                    | **NONE**  | **DO NOT USE**                      | **FORBIDDEN**: LookML dashboards do NOT accept top-level `slug:`. Passing `slug:` returns HTTP `422` on `POST /api/4.0/dashboards/lookml`. Use `preferred_slug:` instead.      |
 | `layout`                  | `string`  | `newspaper`                         | **Mandatory** for modern dashboards. Provides a 24-column grid (`default`) or 72-column grid (`granular`).                                                                    |
 | `layout_granularity`      | `string`  | omit / `default` (`granular` opt-in)| Grid resolution: `'default'` (24 cols, 1x height) or `'granular'` (72 cols = `3x` width/col, `2x` height/row, min tile `6x4`). Keep coordinates consistent with chosen mode. |
 | `preferred_viewer`        | `string`  | `dashboards-next` (or `dashboards`) | Uses the modern Looker rendering engine (`dashboards-next` or `dashboards`).                                                                                                  |
@@ -59,6 +62,7 @@
 | **Funnel**             | `looker_funnel`          | Multi-step dropoff conversion              | ✅ **Required (`modern2026: true`)** |
 | **Timeline**           | `looker_timeline`        | Events & duration blocks                   | ✅ **Required (`modern2026: true`)** |
 | **Word Cloud**         | `looker_wordcloud`       | Keyword density                            | ✅ **Required (`modern2026: true`)** |
+| **Pie / Donut**        | `looker_pie`             | Part-to-whole (<=5 slices, `inner_radius`) | ✅ **Required (`modern2026: true`)** |
 | **Tile Group**         | `group`                  | Visual container grouping child tiles      | ❌ **Omit** (non-queryable container) |
 
 ---

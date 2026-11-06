@@ -73,6 +73,7 @@ Use this template as a production-grade starting point for any new LookML dashbo
       height: 3
 
     # 4. KPI Row (Default to type: single_value - Note: single_value does NOT take modern2026)
+    # Scorecard Uniformity: Keep headline numbers uniform neutral. Color is reserved for comparisons and alerts.
     - title: "Total Revenue"
       name: revenue_kpi
       model: your_model
@@ -94,7 +95,6 @@ Use this template as a production-grade starting point for any new LookML dashbo
       show_comparison: true
       comparison_type: change
       comparison_label: "vs Prior Month"
-      custom_color: "#1A73E8"
       smart_single_value_size: true
       tab_name: executive_summary
       row: 3
@@ -123,7 +123,6 @@ Use this template as a production-grade starting point for any new LookML dashbo
       show_comparison: true
       comparison_type: change
       comparison_label: "vs Prior Month"
-      custom_color: "#34A853"
       smart_single_value_size: true
       tab_name: executive_summary
       row: 3
@@ -150,7 +149,6 @@ Use this template as a production-grade starting point for any new LookML dashbo
           category: measure
           _kind_hint: measure
           _type_hint: number
-      custom_color: "#EA4335"
       smart_single_value_size: true
       tab_name: executive_summary
       row: 3

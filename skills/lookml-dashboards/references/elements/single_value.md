@@ -15,7 +15,7 @@ In Looker dashboards, **always default to `type: single_value`** for headline me
 | :--- | :--- | :--- | :--- |
 | `show_single_value_title` | `boolean` (`true`/`false`) | `Show Title` | Toggle visibility of the card title label. Default is `true`. |
 | `single_value_title` | `string` | `Title Override` | Custom text override for the element title. |
-| `custom_color` | `string` (hex code) | `Value Color` | Hex color code for the primary metric value display (e.g. `"#1A73E8"`). |
+| `custom_color` | `string` (hex code) | `Value Color` | (Optional) Hex color code for the primary metric value. Omit by default so tiles inherit uniform theme typography. |
 | `value_format` | `string` | `Value Format` | Numeric display format pattern (e.g., `"$#,##0"`, `"$#,##0.00"`, `"0.0%"`). |
 | `smart_single_value_size` | `boolean` (`true`/`false`) | `Auto Resize Value` | Dynamically scale font size to fit tile bounds. Recommended: `true`. |
 | `show_comparison` | `boolean` (`true`/`false`) | `Show Comparison` | Display secondary comparison calculation beneath the primary metric. |
@@ -60,7 +60,6 @@ No `offset()` table calculation is required for row-over-row comparison: sort th
   show_chart_component: true
   kpi_chart_type: area
   visible_x_axis: false
-  custom_color: "#1A73E8"
   smart_single_value_size: true
   row: 0
   col: 0
@@ -84,7 +83,6 @@ No `offset()` table calculation is required for row-over-row comparison: sort th
   show_comparison: true
   comparison_type: progress_percentage
   comparison_label: "of $1M Goal"
-  custom_color: "#34A853"
   smart_single_value_size: true
   row: 0
   col: 6

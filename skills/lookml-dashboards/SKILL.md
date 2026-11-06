@@ -77,6 +77,7 @@ Tabs organize complex dashboards into logical sections (e.g., "Executive Summary
 ## 3. KPI Cards & Single Value Defaults
 
 - **Default Visualization Type**: **Always default to `type: single_value`** for KPI scorecard tiles, headline metrics, and summary numbers.
+- **Headline Styling**: Omit `custom_color` by default so KPI cards inherit the Looker theme's clean, uniform typography. Color is reserved for comparison deltas (`comparison_type: change` or `change_percentage`) or threshold-driven alerts (`enable_conditional_formatting: true`).
 - **Single Record Constraint**: `type: looker_single_record` (or `single_record`) displays a single entity's raw field-value list and must **only be used when the user explicitly requests single record inspection**.
 - **Engine Flag**: `type: single_value` and `type: looker_single_record` do **NOT** use `modern2026: true`. Omit this flag on all single value elements.
 - **Comparison Types & Native Row-over-Row PoP**:
