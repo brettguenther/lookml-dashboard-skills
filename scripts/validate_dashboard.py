@@ -184,40 +184,39 @@ def validate_dashboard_dict(dash, filepath):
                         "String font sizes cause NaN (0px) row heights and render blank tables. Use a numeric pixel integer (e.g. 12)."
                     )
 
-        # Check single_value comparison configuration (comparison_series & comparison_row)
+        # Check single_value comparison configuration (primary_row, comparison_row & comparison_series)
         if etype == 'single_value' and elem.get('show_comparison'):
+            primary_row = elem.get('primary_row', 'first')
             comp_row = elem.get('comparison_row')
+            primary_series = elem.get('primary_series')
             comp_series = elem.get('comparison_series')
             fields_list = elem.get('fields') if isinstance(elem.get('fields'), list) else []
             has_dynamic = bool(elem.get('dynamic_fields'))
-            sorts = elem.get('sorts') or []
-            limit_val = elem.get('limit')
-            is_multi_row_pop = bool(sorts) or (isinstance(limit_val, int) and limit_val > 1)
+
+            if primary_row is not None and (not isinstance(primary_row, str) or primary_row not in VALID_COMPARISON_ROWS):
+                errors.append(
+                    f"[{dash_name} -> {ename}] Invalid 'primary_row: {primary_row}'. "
+                    f"Must be one of {sorted(VALID_COMPARISON_ROWS)}."
+                )
 
             if comp_row is not None:
                 if not isinstance(comp_row, str) or comp_row not in VALID_COMPARISON_ROWS:
                     errors.append(
                         f"[{dash_name} -> {ename}] Invalid 'comparison_row: {comp_row}'. "
-                        f"Must be one of {sorted(VALID_COMPARISON_ROWS)} (use 'second' for Row 1 vs Row 2 PoP)."
+                        f"Must be one of {sorted(VALID_COMPARISON_ROWS)} ('first', 'second', 'last', 'total')."
                     )
-                elif comp_row == 'first' and not has_dynamic:
-                    if any('desc' in str(s).lower() for s in sorts):
-                        errors.append(
-                            f"[{dash_name} -> {ename}] 'comparison_row: first' with descending sort and no dynamic_fields "
-                            "compares Row 1 against Row 1 (0% change). Set 'comparison_row: second' for Row 1 vs Row 2 PoP."
-                        )
-            elif len(fields_list) >= 2 and not has_dynamic and is_multi_row_pop:
-                errors.append(
-                    f"[{dash_name} -> {ename}] Missing 'comparison_row: second' on multi-row single_value with 'show_comparison: true' "
-                    "and multiple fields (no dynamic_fields). Set 'comparison_row: second' to compare Row 1 (current) against Row 2 (prior)."
-                )
+                elif (
+                    comp_row == primary_row
+                    and not has_dynamic
+                    and not elem.get('pivots')
+                    and ((primary_series and comp_series and primary_series == comp_series) or len(fields_list) == 1)
+                ):
+                    errors.append(
+                        f"[{dash_name} -> {ename}] 'comparison_row: {comp_row}' matches 'primary_row: {primary_row}' on the same series, "
+                        "which compares a cell against itself (0% change). Use 'second' (prior row), 'last' (oldest/baseline row), 'total' (totals row), or compare two distinct measures."
+                    )
 
-            if len(fields_list) >= 2 and not has_dynamic and is_multi_row_pop and not comp_series:
-                errors.append(
-                    f"[{dash_name} -> {ename}] Missing 'comparison_series' on multi-row single_value with 'show_comparison: true' "
-                    f"and fields {fields_list}. Explicitly set 'comparison_series: <view.measure>' so Looker compares the metric rather than the timeframe dimension."
-                )
-            elif comp_series and fields_list and not has_dynamic and str(comp_series) not in [str(f) for f in fields_list]:
+            if comp_series and fields_list and not has_dynamic and not elem.get('pivots') and str(comp_series) not in [str(f) for f in fields_list]:
                 errors.append(
                     f"[{dash_name} -> {ename}] 'comparison_series: {comp_series}' is not present in element 'fields: {fields_list}'."
                 )
