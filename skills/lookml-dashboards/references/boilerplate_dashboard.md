@@ -74,27 +74,35 @@ Use this template as a production-grade starting point for any new LookML dashbo
 
     # 4. KPI Row (Default to type: single_value - Note: single_value does NOT take modern2026)
     # Scorecard Uniformity: Keep headline numbers uniform neutral. Color is reserved for comparisons and alerts.
-    - title: "Total Revenue"
+    # Native PoP Comparison: Sort timeframe descending (Row 1 = current period, Row 2 = prior period),
+    # set comparison_series: <view.measure>, comparison_row: second, comparison_type: change_percentage,
+    # and filter by is_mtd: "Yes" so incomplete current months compare equivalent elapsed days.
+    - title: "Total Revenue (MTD)"
       name: revenue_kpi
       model: your_model
       explore: order_items
       type: single_value
-      fields: [order_items.total_sale_price, orders.created_month]
+      fields: [orders.created_month, order_items.total_sale_price]
       filters:
-        orders.created_date: "2 months ago for 2 months"
-      sorts: [orders.created_month desc] # Descending sort ensures offset(..., 1) compares to prior month
-      limit: 2
+        orders.created_date: "13 months"
+        orders.is_mtd: "Yes"
+      sorts: [orders.created_month desc]
+      limit: 13
       listen:
         date_range: orders.created_date
         product_category: products.category
-      dynamic_fields:
-        - table_calculation: pop_change
-          label: "vs Prior Month"
-          expression: "${order_items.total_sale_price} / offset(${order_items.total_sale_price}, 1) - 1"
-          value_format_name: percent_1
+      single_value_title: "Total Revenue (MTD)"
+      show_single_value_title: true
       show_comparison: true
-      comparison_type: change
-      comparison_label: "vs Prior Month"
+      comparison_type: change_percentage
+      comparison_series: order_items.total_sale_price
+      comparison_row: second
+      show_comparison_label: true
+      comparison_label: "vs Prior Month (MTD)"
+      comparison_reverse_colors: false
+      show_chart_component: true
+      kpi_chart_type: area
+      visible_x_axis: false
       smart_single_value_size: true
       tab_name: executive_summary
       row: 3
@@ -102,27 +110,32 @@ Use this template as a production-grade starting point for any new LookML dashbo
       width: 8
       height: 4
 
-    - title: "Orders Count"
+    - title: "Orders Count (MTD)"
       name: orders_count_kpi
       model: your_model
       explore: order_items
       type: single_value
-      fields: [orders.count, orders.created_month]
+      fields: [orders.created_month, orders.count]
       filters:
-        orders.created_date: "2 months ago for 2 months"
+        orders.created_date: "13 months"
+        orders.is_mtd: "Yes"
       sorts: [orders.created_month desc]
-      limit: 2
+      limit: 13
       listen:
         date_range: orders.created_date
         product_category: products.category
-      dynamic_fields:
-        - table_calculation: pop_orders_change
-          label: "vs Prior Month"
-          expression: "${orders.count} / offset(${orders.count}, 1) - 1"
-          value_format_name: percent_1
+      single_value_title: "Orders Count (MTD)"
+      show_single_value_title: true
       show_comparison: true
-      comparison_type: change
-      comparison_label: "vs Prior Month"
+      comparison_type: change_percentage
+      comparison_series: orders.count
+      comparison_row: second
+      show_comparison_label: true
+      comparison_label: "vs Prior Month (MTD)"
+      comparison_reverse_colors: false
+      show_chart_component: true
+      kpi_chart_type: area
+      visible_x_axis: false
       smart_single_value_size: true
       tab_name: executive_summary
       row: 3
