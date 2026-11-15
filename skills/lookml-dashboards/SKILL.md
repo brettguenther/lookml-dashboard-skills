@@ -267,7 +267,7 @@ Modern `looker_grid` / `table` visualizations (`modern2026: true`) support multi
    - `default_display_level`: Must be one of `'collapsed'`, `'top_expanded'`, or `'all_expanded'`.
    - `show_grouped_columns: false`: Merges dimensions into the auto-column tree and hides redundant separate columns.
    - **Mutual Exclusivity**: `row_groups.enabled: true` is **disabled if pagination is active (`table_enable_pagination: true`) or sparklines are active (`table_sparklines.enabled: true`)**.
-   - **Subtotal Rollup Semantics**: When `configurable_subtotals: true`, AG Grid calculates client-side subtotals **only for `sum` and `count` measures**. Averages and complex measures render blank to prevent mathematically invalid rollups.
+   - **Subtotal Rollup Semantics**: When `configurable_subtotals: true`, AG Grid calculates client-side subtotals **only for `sum` and `count` measures**. Averages, distinct counts, ratios, and table calculations render blank on group rows to prevent mathematically invalid rollups — omit the finest-grain leaf dimension from `row_grouping_fields` (e.g., group by `[products.department]` while keeping `products.category` in `fields:`) whenever non-`sum`/`count` columns must remain populated on leaf rows.
    - **Per-Tier Styling**: Applying `series_text_format.<dimension_name>` to any grouped dimension in `row_grouping_fields` styles **that exact hierarchy depth tier** in the tree auto-column.
 2. **Column Groups (`table_column_groups`)**:
    - Creates multi-tier parent header banners across multiple child columns.
@@ -339,3 +339,33 @@ vis_config:
 - [ ] All `y_axes` entries format `series` as a list of objects (`- id: field_name`), never raw strings.
 - [ ] Every Period-over-Period KPI has descending sort on the date dimension (`limit: 2`).
 - [ ] Elements joining nullable dimensions have explicit `-NULL` filters to prevent unmapped groupings.
+- [ ] All tabs have been visually rendered to PNG via `scripts/looker_visual_qa.py` and inspected via `read_file` (zero blank `modern2026: true` grids, zero unwanted cell bars, zero rainbow KPI text colors, zero axis/legend collisions, and zero `∅` null legend slices).
+
+---
+
+## 14. Automated Visual QA & Multimodal Verification (`looker_visual_qa.py`)
+
+After static AST linting (`scripts/validate_dashboard.py`), always execute multi-tab visual rendering via `scripts/looker_visual_qa.py` (or `npx github:brettguenther/lookml-dashboard-skills --visual-qa`, backed by `looker-cli`) and inspect the rendered PNGs with `read_file` (see the [`looker-visual-qa`](../looker-visual-qa/SKILL.md) skill):
+
+```bash
+# 1. Pre-Production LookML Layout QA (imports ephemeral staging UDD in personal folder, renders all tabs, cleans up):
+python3 scripts/looker_visual_qa.py render-dashboard \
+  --lookml-path "<path/to/file.dashboard.lookml>" \
+  --stage-udd \
+  --output-dir "<scratch_dir>/vqa_renders" \
+  --json
+
+# 2. Post-Deploy LookML or UDD Multi-Tab Render:
+python3 scripts/looker_visual_qa.py render-dashboard \
+  --dashboard-id "<model::slug_or_udd_id>" \
+  --lookml-path "<path/to/file.dashboard.lookml>" \
+  --output-dir "<scratch_dir>/vqa_renders" \
+  --json
+
+# 3. Fast Dev-Mode Single-Tile Probe (~3-8s via run_inline_query png --apply_vis):
+python3 scripts/looker_visual_qa.py render-tile \
+  --lookml-path "<path/to/file.dashboard.lookml>" \
+  --element "<element_name_or_title>" \
+  --output "<scratch_dir>/tile.png" \
+  --json
+```

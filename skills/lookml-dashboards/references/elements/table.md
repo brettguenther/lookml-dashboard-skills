@@ -70,6 +70,7 @@ Enables collapsible parent-child tree hierarchy grouping inside modern `looker_g
 2. **Sparklines Incompatibility**: `row_groups.enabled: true` is **mutually exclusive with `table_sparklines.enabled: true`**.
 3. **Subtotal Rollup Limitation**: When `row_groups.configurable_subtotals: true`, AG Grid computes client-side subtotals **only for `sum` and `count` measures**. Averages, distinct counts, minimums, maximums, and table calculations render blank on group header rows to prevent mathematically invalid rollups.
 4. **Per-Tier Styling**: Applying `series_text_format.<dimension_name>` to any grouped dimension in `row_grouping_fields` styles **that exact hierarchy depth level** inside the auto-column tree.
+5. **Omit Finest-Grain Leaf Dimension When Displaying Non-Additive Measures**: Because AG Grid leaves `average`, `count_distinct`, ratio measures, and table calculations blank on group subtotal rows, grouping down to the query's finest-grain dimension turns every leaf category into a group header row and blanks non-`sum`/`count` columns. Omit the finest-grain leaf dimension from `row_grouping_fields` (e.g., set `row_grouping_fields: [products.department]` while keeping `products.category` as an ungrouped leaf column in `fields:`) so leaf rows display all measure types cleanly under collapsible parent subtotals.
 
 ```yaml
 row_groups:

@@ -6,6 +6,15 @@ const { spawnSync } = require('child_process');
 
 const args = process.argv.slice(2);
 
+// Handle visual QA flag
+if (args.includes('--visual-qa') || args.includes('--vqa')) {
+  const vqaIndex = args.indexOf('--visual-qa') !== -1 ? args.indexOf('--visual-qa') : args.indexOf('--vqa');
+  const vqaArgs = args.slice(vqaIndex + 1);
+  const vqaScript = path.join(__dirname, '..', 'scripts', 'looker_visual_qa.py');
+  const result = spawnSync('python3', [vqaScript, ...vqaArgs], { stdio: 'inherit' });
+  process.exit(result.status || 0);
+}
+
 // Handle validation flag
 if (args.includes('--validate') || args.includes('-v')) {
   const vIndex = args.indexOf('--validate') !== -1 ? args.indexOf('--validate') : args.indexOf('-v');
@@ -30,6 +39,7 @@ Usage:
 
 Commands & Options:
   --validate, -v <path>   Validate LookML dashboard YAML files for fatal rendering bugs
+  --visual-qa, --vqa      Run multi-tab Looker Visual QA rendering & pixel audit
   --target, -t <dir>      Specify target directory to install skills
   --help, -h              Show this help message
 `);
@@ -65,6 +75,7 @@ function installSkills() {
   copyRecursiveSync(sourceSkillsDir, targetDir);
   console.log('✅ Successfully installed LookML Dashboard Skills!');
   console.log('   - lookml-dashboards (with element visualization parameter references & dynamic fields)');
+  console.log('   - looker-visual-qa (multi-tab PNG/PDF rendering & pixel audit via looker-cli)');
 }
 
 function copyRecursiveSync(src, dest) {

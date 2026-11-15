@@ -2,6 +2,34 @@
 
 This reference provides exact visualization configuration options for Funnel chart elements in LookML dashboards.
 
+> [!CAUTION]
+> **Looker 26.22+ Multi-Measure Funnel Rendering Defect**:
+> `type: looker_funnel` strictly expects **1 dimension + 1 measure** (stage category + stage count/metric). When passed **multiple measures with 0 dimensions** (e.g., 5 sequential conversion measures), Looker silently renders **only the first metric**.
+>
+> **Canonical Multi-Measure Alternative**: For multi-stage conversion funnels across distinct measures, use `type: looker_column` (`modern2026: true`) with `show_dropoff: true` and `show_x_axis_ticks: false`:
+>
+> ```yaml
+> - title: "5-Stage Digital Conversion Dropoff"
+>   name: session_conversion_dropoff
+>   model: thelook
+>   explore: events
+>   type: looker_column
+>   modern2026: true
+>   fields:
+>     - sessions.total_visitors
+>     - sessions.product_views
+>     - sessions.cart_adds
+>     - sessions.checkout_starts
+>     - sessions.purchases
+>   show_dropoff: true
+>   show_x_axis_ticks: false
+>   legend_position: center
+>   row: 8
+>   col: 0
+>   width: 12
+>   height: 8
+> ```
+
 ## Options Reference Table
 
 | Option Key / Path | Type | Label | Description |

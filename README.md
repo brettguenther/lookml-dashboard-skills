@@ -8,6 +8,7 @@ Production-grade LookML dashboard design, implementation, and rendering validati
 ## Features
 
 - **`lookml-dashboards`**: Unified skill covering dashboard layout (`newspaper` 24-column default and 72-column `layout_granularity: granular` grids), sectioning, isolated tab coordinate grids, dashboard tile groups (`type: group`), KPI scorecard design (defaulting to `type: single_value`), dynamic fields (table calculations, custom dimensions, and custom measures), mixed series and dual axes, global and tile-scoped dashboard filters (`ui_config`, `vis_filter: true`), table hierarchy grouping (`row_groups`, `table_column_groups`), advanced markdown/HTML styling, and performance optimization.
+- **`looker-visual-qa`**: Automated multi-tab PNG/PDF dashboard rendering (`render-dashboard`, `--stage-udd`) and Dev-Mode single-tile rendering (`render-tile`) via `looker-cli`, paired with deterministic pixel auditing and multimodal inspection.
 - **Dynamic Fields Coverage**: Full syntax and production patterns for:
   - Table Calculations (`table_calculation:`)
   - Custom Dimensions (`category: dimension`, `expression:`)
@@ -31,6 +32,7 @@ Production-grade LookML dashboard design, implementation, and rendering validati
   - Numeric pixel integers (`11`, `12`) for `rows_font_size` / `header_font_size` on `modern2026: true` grids (rejecting strings like `'small'` that cause `NaN` `0px` blank tables)
   - `crossfilter_enabled: false` enforcement when dashboard tiles span multiple Explores
   - `single_value` `comparison_row` string enum (`first | second | last | total`) and descending-sort PoP validation
+  - `preferred_slug` exact 22-character alphanumeric enforcement (`^[A-Za-z0-9]{22}$`) and `vis_filter: true` / `row_groups` compiler invariants
   - Tab assignment integrity
 
 ## Quick Start (Installation & Validation via `npx`)

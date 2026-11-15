@@ -20,6 +20,7 @@ In Looker dashboards, **always default to `type: single_value`** for headline me
 | `smart_single_value_size` | `boolean` (`true`/`false`) | `Auto Resize Value` | Dynamically scale font size to fit tile bounds. Recommended: `true`. |
 | `primary_series` | `string` | `Primary Series` | (Optional) Field name or pivoted series ID (`"<pivotKey> - <fieldName>"`) for the headline KPI metric. Defaults to the leftmost measure in `fields:`. |
 | `primary_row` | `string` (`'first'`, `'second'`, `'last'`, `'total'`) | `Primary Row` | Row in the query result (`KPI_ROW_SELECTION`) providing the headline KPI value. Defaults to `'first'`. |
+| `comparison_value_format` | `string` | `Comparison Value Format` | Explicit numeric format pattern for the secondary comparison value/baseline (e.g. `"of $1.20M"` or `"vs $450.00K"`). Supports dynamic log-level stepping: `'[>=1000000]$0.00,,"M";[>=1000]$0.00,"K";$0.00'`. |
 | `show_comparison` | `boolean` (`true`/`false`) | `Show Comparison` | Display secondary comparison calculation beneath the primary metric. |
 | `comparison_type` | `string` (`'value'`, `'change'`, `'change_percentage'`, `'progress'`, `'progress_percentage'`) | `Comparison Type` | Comparison mode: `'value'` (display as-is), `'change'` (absolute delta `primary - comparison`), `'change_percentage'` (`(primary - comparison) / \|comparison\|`), `'progress'` (progress bar + value), `'progress_percentage'` (progress bar + `%` of target). |
 | `comparison_label` | `string` | `Comparison Label` | Text label next to comparison value (e.g. `"vs Prior Month (MTD)"`). |
@@ -38,7 +39,7 @@ In Looker dashboards, **always default to `type: single_value`** for headline me
 ## Production LookML Examples
 
 ### 1. Headline Revenue KPI with Native Period-over-Period Comparison & Sparkline
-No `offset()` table calculation is required for row-over-row comparison: sort the timeframe dimension descending (`Row 1` = current period, `Row 2` = prior period), set `comparison_series: <view.measure>`, `comparison_row: second`, and `comparison_type: change_percentage`. When Row 1 is an incomplete current month (Month-to-Date), filter by an `is_mtd: "Yes"` dimension (`EXTRACT(DAY FROM date) <= EXTRACT(DAY FROM CURRENT_DATE())`) so Row 2 and the sparkline compare equivalent elapsed days of each month:
+No `offset()` table calculation is required for row-over-row comparison: sort the timeframe dimension descending (`Row 1` = current period, `Row 2` = prior period), set `comparison_series: <view.measure>`, `comparison_row: second`, and `comparison_type: change_percentage` (or `comparison_type: value` for low-variance rates such as ASP or Bounce Rate to avoid misleading `+0%` deltas). Set both `value_format` and `comparison_value_format` to `'[>=1000000]$0.00,,"M";[>=1000]$0.00,"K";$0.00'` so both the headline number and baseline scale cleanly when filtered. When Row 1 is an incomplete current month (Month-to-Date), filter by an `is_mtd: "Yes"` dimension (`EXTRACT(DAY FROM date) <= EXTRACT(DAY FROM CURRENT_DATE())`) so Row 2 and the sparkline compare equivalent elapsed days of each month:
 
 ```yaml
 - title: "Total Net Revenue (MTD)"
@@ -47,6 +48,8 @@ No `offset()` table calculation is required for row-over-row comparison: sort th
   explore: order_items
   type: single_value
   fields: [orders.created_month, order_items.total_sale_price]
+  value_format: '[>=1000000]$0.00,,"M";[>=1000]$0.00,"K";$0.00'
+  comparison_value_format: '[>=1000000]$0.00,,"M";[>=1000]$0.00,"K";$0.00'
   filters:
     orders.created_date: "13 months"
     orders.is_mtd: "Yes"

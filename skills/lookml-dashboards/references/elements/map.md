@@ -166,3 +166,28 @@ When `type: looker_geo_choropleth` is explicitly requested (e.g., for Australian
   empty_color: "#F1F3F4"
   show_view_names: false
 ```
+
+---
+
+## Regional Density Heatmaps vs. Pin Dilution (`map_plot_mode: automagic_heatmap`)
+
+When plotting dense national, continental, or transatlantic coordinate distributions where individual scatter markers dilute regional density or get clipped on zoom:
+
+- Switch from raw pin points to `map_plot_mode: automagic_heatmap` with `heatmap_opacity: 0.75` and `map_position: fit_data` so spatial demand clusters render cleanly across broad geographies.
+
+```yaml
+- name: customer_spend_heatmap
+  title: "Customer Geographic Value Concentration"
+  model: thelook
+  explore: order_items
+  type: looker_google_map
+  fields: [users.location, order_items.total_sale_price]
+  filters:
+    users.location: "-NULL"
+  limit: 5000
+  map_plot_mode: automagic_heatmap
+  heatmap_opacity: 0.75
+  map_tile_provider: light
+  map_position: fit_data
+  show_view_names: false
+```

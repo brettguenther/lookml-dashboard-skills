@@ -44,7 +44,7 @@ MODERN2026_UNSUPPORTED = {
 }
 
 VALID_COMPARISON_ROWS = {'first', 'second', 'last', 'total'}
-PREFERRED_SLUG_RE = re.compile(r"^[A-Za-z0-9_-]{10,50}$")
+PREFERRED_SLUG_RE = re.compile(r"^[A-Za-z0-9]{22}$")
 LEGACY_YES_NO_RE = re.compile(
     r"^\s*(modern2026|crossfilter_enabled|show_comparison|comparison_reverse_colors|"
     r"title_hidden|allow_multiple_values|required|show_view_names|show_row_numbers|"
@@ -79,7 +79,8 @@ def validate_dashboard_dict(dash, filepath):
     if preferred_slug and not PREFERRED_SLUG_RE.match(str(preferred_slug)):
         errors.append(
             f"[{dash_name}] Invalid 'preferred_slug: {preferred_slug}'. "
-            "Must match ^[A-Za-z0-9_-]{10,50}$ (10 to 50 chars, letters/digits/hyphens/underscores only)."
+            "Looker API 4.0 enforces /^[A-Za-z0-9]{22}$/ on POST /api/4.0/dashboards/lookml. "
+            "Must be exactly 22 alphanumeric characters (no hyphens or underscores), or omit preferred_slug to auto-generate a valid slug."
         )
     
     # 1. Check declared tabs
@@ -89,8 +90,10 @@ def validate_dashboard_dict(dash, filepath):
             if isinstance(tab, dict) and 'name' in tab:
                 declared_tabs.add(tab['name'])
 
-    # 2. Check filters for fatal period (.) in name and collect declared filter names
+    # 2. Check filters for fatal period (.) in name, collect declared filter names, and check vis_filter rules
     declared_filters = set()
+    vis_filters = set()
+    vis_filter_bind_counts = {}
     if 'filters' in dash and isinstance(dash['filters'], list):
         for f in dash['filters']:
             if isinstance(f, dict):
@@ -102,6 +105,26 @@ def validate_dashboard_dict(dash, filepath):
                         f"[{dash_name}] Filter name '{fname}' contains a period ('.'). "
                         "Looker LookML compiler crashes on periods in filter names."
                     )
+                if f.get('vis_filter') is True:
+                    if fname:
+                        vis_filters.add(str(fname))
+                        vis_filter_bind_counts[str(fname)] = 0
+                    if f.get('required') is True:
+                        errors.append(
+                            f"[{dash_name}] Tile-scoped filter '{fname}' has 'vis_filter: true' and 'required: true'. "
+                            "Looker requires 'required: false' (or omitted) for vis_filter."
+                        )
+                    if f.get('listens_to_filters'):
+                        errors.append(
+                            f"[{dash_name}] Tile-scoped filter '{fname}' has 'vis_filter: true' and non-empty 'listens_to_filters'. "
+                            "A vis_filter cannot cascade from parent filters ('listens_to_filters' must be [] or omitted)."
+                        )
+                    ui_cfg = f.get('ui_config')
+                    if isinstance(ui_cfg, dict) and ui_cfg.get('display') not in (None, 'popover'):
+                        errors.append(
+                            f"[{dash_name}] Tile-scoped filter '{fname}' has 'vis_filter: true' with 'ui_config.display: {ui_cfg.get('display')}'. "
+                            "Looker requires 'ui_config.display: popover' for vis_filter."
+                        )
 
     # 3. Check elements
     elements = dash.get('elements', [])
@@ -175,13 +198,38 @@ def validate_dashboard_dict(dash, filepath):
                     "Omit 'modern2026: true' to avoid rendering errors."
                 )
 
-        # Check looker_grid / table font sizes: string font sizes cause NaN (0px) row height when modern2026: true
-        if etype in ('looker_grid', 'table') and elem.get('modern2026'):
-            for font_key in ('rows_font_size', 'header_font_size'):
-                if font_key in elem and isinstance(elem[font_key], str):
+        # Check looker_grid / table font sizes & row_groups invariants
+        if etype in ('looker_grid', 'table'):
+            if elem.get('modern2026'):
+                for font_key in ('rows_font_size', 'header_font_size'):
+                    if font_key in elem and isinstance(elem[font_key], str):
+                        errors.append(
+                            f"[{dash_name} -> {ename}] '{font_key}: {elem[font_key]}' is a string on a modern2026 {etype}. "
+                            "String font sizes cause NaN (0px) row heights and render blank tables. Use a numeric pixel integer (e.g. 12)."
+                        )
+            row_groups = elem.get('row_groups')
+            if isinstance(row_groups, dict) and row_groups.get('enabled') is True:
+                if elem.get('table_enable_pagination') is True:
                     errors.append(
-                        f"[{dash_name} -> {ename}] '{font_key}: {elem[font_key]}' is a string on a modern2026 {etype}. "
-                        "String font sizes cause NaN (0px) row heights and render blank tables. Use a numeric pixel integer (e.g. 12)."
+                        f"[{dash_name} -> {ename}] 'row_groups.enabled: true' is mutually exclusive with 'table_enable_pagination: true'."
+                    )
+                sparklines = elem.get('table_sparklines')
+                if isinstance(sparklines, dict) and sparklines.get('enabled') is True:
+                    errors.append(
+                        f"[{dash_name} -> {ename}] 'row_groups.enabled: true' is mutually exclusive with 'table_sparklines.enabled: true'."
+                    )
+                group_fields = row_groups.get('row_grouping_fields')
+                fields_list = elem.get('fields')
+                if (
+                    isinstance(group_fields, list)
+                    and len(group_fields) > 0
+                    and isinstance(fields_list, list)
+                    and len(fields_list) > 0
+                    and set(str(x) for x in fields_list).issubset(set(str(g) for g in group_fields))
+                ):
+                    errors.append(
+                        f"[{dash_name} -> {ename}] 'row_grouping_fields' consumes all query fields ({fields_list}), "
+                        "leaving no ungrouped leaf or measure columns."
                     )
 
         # Check single_value comparison configuration (primary_row, comparison_row & comparison_series)
@@ -235,15 +283,25 @@ def validate_dashboard_dict(dash, filepath):
                                     "Passing strings causes fatal frontend crash: \"Cannot create property 'id' on string\"."
                                 )
 
-        # Check listen filter references against declared filters
+        # Check listen filter references against declared filters and vis_filter single-element binding
         listen = elem.get('listen')
-        if isinstance(listen, dict) and declared_filters:
+        if isinstance(listen, dict):
             for filter_ref in listen.keys():
-                if str(filter_ref) not in declared_filters:
+                fref_str = str(filter_ref)
+                if fref_str in vis_filters:
+                    vis_filter_bind_counts[fref_str] = vis_filter_bind_counts.get(fref_str, 0) + 1
+                if declared_filters and fref_str not in declared_filters:
                     errors.append(
                         f"[{dash_name} -> {ename}] 'listen' references undeclared filter '{filter_ref}' "
                         f"(declared filters: {sorted(declared_filters)})."
                     )
+
+    for vf_name, bind_count in sorted(vis_filter_bind_counts.items()):
+        if bind_count > 1:
+            errors.append(
+                f"[{dash_name}] Tile-scoped filter '{vf_name}' ('vis_filter: true') is bound to {bind_count} elements. "
+                "A vis_filter can only bind to a single visualization element."
+            )
 
     # 4. Check crossfilter_enabled across multiple explores
     if dash.get('crossfilter_enabled') is True and len(distinct_explores) > 1:

@@ -4,6 +4,7 @@
   "description": "Production-grade LookML Dashboard skills and validation for AI coding agents",
   "author": "Brett Guenther",
   "skills": [
-    "./skills/lookml-dashboards"
+    "./skills/lookml-dashboards",
+    "./skills/looker-visual-qa"
   ]
 }

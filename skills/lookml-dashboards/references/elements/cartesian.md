@@ -108,3 +108,7 @@ This reference provides exact visualization configuration options for Cartesian 
    - When plotting 3 or more measures with `y_axis_combined: false`, always explicitly bind every measure in `y_axes[*].series` to either the `left` or `right` axis so Looker does not auto-create 3+ separate Y-axes.
 3. **`stacking: percent` + `label_value_format` Double-Scaling Bug**:
    - Never set `label_value_format: "0.00%"` on a `stacking: percent` chart — Highcharts already scales percent-stacked values to `0..100`, so a `%` format string multiplies by `100` a second time (`50.90%` renders as `5090.00%`). Leave `label_value_format` unset or use `"0.0\"%\""`.
+4. **Trailing Incomplete Period Cliff Suppression**:
+   - When weekly or monthly trend queries include a partial trailing period (e.g., current week with 1 day of data), suppress the incomplete trailing point without altering rolling calculations via `limit_displayed_rows: true` and `limit_displayed_rows_values: { show_hide: hide, first_last: last, num_rows: 1 }`.
+5. **Cohort Retention Month 0 Scale Expansion**:
+   - In retention curves where Month 0 is always `100%` and compresses Months 1–12, hide Month 0 while preserving it in table-calculation denominators using `limit_displayed_rows: true` and `limit_displayed_rows_values: { show_hide: hide, first_last: first, num_rows: 1 }`.
