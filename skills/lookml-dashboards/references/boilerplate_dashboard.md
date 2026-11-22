@@ -58,19 +58,16 @@ Use this template as a production-grade starting point for any new LookML dashbo
       vis_filter: true
 
   elements:
-    # 3. Branding & Navigation Header Tile
+    # 3. Theme-Inheriting Header Tile (zero hardcoded hex colors so Light/Dark themes work natively)
     - name: overview_header
       type: text
       tab_name: executive_summary
-      title_text: "<font color='#1F1F1F' size='4.5' weight='bold'>Business Pulse :</font> <font color='#1A73E8' size='4.5'>Overview</font>"
-      body_text: |
-        <div style="height: 100%; position: relative;">
-          <p style="color: #5F6368; font-size: 14px;">High-level quarterly performance KPIs, trends, and regional fulfillment.</p>
-        </div>
+      title_text: "Business Pulse — Overview"
+      subtitle_text: "High-level quarterly performance KPIs, trends, and regional fulfillment."
       row: 0
       col: 0
       width: 24
-      height: 3
+      height: 2
 
     # 4. KPI Row (Default to type: single_value - Note: single_value does NOT take modern2026)
     # Scorecard Uniformity: Keep headline numbers uniform neutral. Color is reserved for comparisons and alerts.
@@ -83,6 +80,8 @@ Use this template as a production-grade starting point for any new LookML dashbo
       explore: order_items
       type: single_value
       fields: [orders.created_month, order_items.total_sale_price]
+      value_format: '[>=1000000]$0.00,,"M";[>=1000]$0.00,"K";$0.00'
+      comparison_value_format: '[>=1000000]$0.00,,"M";[>=1000]$0.00,"K";$0.00'
       filters:
         orders.created_date: "13 months"
         orders.is_mtd: "Yes"
@@ -116,6 +115,8 @@ Use this template as a production-grade starting point for any new LookML dashbo
       explore: order_items
       type: single_value
       fields: [orders.created_month, orders.count]
+      value_format: "#,##0"
+      comparison_value_format: "#,##0"
       filters:
         orders.created_date: "13 months"
         orders.is_mtd: "Yes"

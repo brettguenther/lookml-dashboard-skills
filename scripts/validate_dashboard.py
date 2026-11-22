@@ -133,13 +133,38 @@ def validate_dashboard_dict(dash, filepath):
         return errors
 
     distinct_explores = set()
-    max_cols = 72 if (dash.get('layout_granularity') == 'granular' or dash.get('col_width') == 15) else 24
+    is_granular = (dash.get('layout_granularity') == 'granular' or dash.get('col_width') == 15)
+    max_cols = 72 if is_granular else 24
+    group_header_rows = 2 if is_granular else 1
+
+    group_defs = {}
+    group_children = {}
+    for idx, elem in enumerate(elements):
+        if isinstance(elem, dict) and elem.get('type') == 'group':
+            gname = elem.get('name')
+            if gname:
+                group_defs[str(gname)] = elem
 
     for idx, elem in enumerate(elements):
         if not isinstance(elem, dict):
             continue
         ename = elem.get('name') or elem.get('title') or f"element_{idx}"
         etype = elem.get('type')
+
+        # Track Dashboard Tile Group membership & forbid nested groups
+        parent_group = elem.get('group')
+        if parent_group is not None:
+            pg_str = str(parent_group)
+            if etype == 'group':
+                errors.append(
+                    f"[{dash_name} -> {ename}] Nested 'type: group' inside group '{pg_str}' is forbidden by Looker."
+                )
+            elif pg_str not in group_defs:
+                errors.append(
+                    f"[{dash_name} -> {ename}] References undeclared 'group: {pg_str}' (no matching 'type: group' element)."
+                )
+            else:
+                group_children.setdefault(pg_str, []).append((ename, elem))
 
         if elem.get('model') and elem.get('explore'):
             distinct_explores.add((str(elem['model']), str(elem['explore'])))
@@ -269,6 +294,37 @@ def validate_dashboard_dict(dash, filepath):
                     f"[{dash_name} -> {ename}] 'comparison_series: {comp_series}' is not present in element 'fields: {fields_list}'."
                 )
 
+        # Check looker_boxplot constraints: 0 pivots and omit series_labels (URL-encodes onto Y-axis title)
+        if etype == 'looker_boxplot':
+            if elem.get('pivots'):
+                errors.append(
+                    f"[{dash_name} -> {ename}] 'looker_boxplot' does not support 'pivots'. Remove 'pivots' and supply 2, 3, or 5 measures."
+                )
+            if elem.get('series_labels'):
+                errors.append(
+                    f"[{dash_name} -> {ename}] Omit 'series_labels' on 'looker_boxplot': Looker URL-encodes series_labels onto the Y-axis title (%20/%28/%29). "
+                    "Set the Y-axis label via 'y_axes: [{label: ..., series: [{id: <first_measure>}]}]' instead."
+                )
+
+        # Check limit_displayed_rows_values schema & fill_fields trailing-cliff trap
+        ldr_vals = elem.get('limit_displayed_rows_values')
+        if isinstance(ldr_vals, dict):
+            if 'position' in ldr_vals:
+                errors.append(
+                    f"[{dash_name} -> {ename}] 'limit_displayed_rows_values.position' is invalid LookML. "
+                    "Use 'show_hide: show|hide' and 'first_last: first|last' alongside 'num_rows'."
+                )
+            if (
+                elem.get('limit_displayed_rows') is True
+                and ldr_vals.get('show_hide') == 'hide'
+                and ldr_vals.get('first_last') == 'last'
+                and elem.get('fill_fields')
+            ):
+                errors.append(
+                    f"[{dash_name} -> {ename}] 'fill_fields' combined with 'limit_displayed_rows_values: {{show_hide: hide, first_last: last}}' "
+                    "fills an empty future period row so hiding the last row drops the filled blank period instead of the partial current period. Remove 'fill_fields'."
+                )
+
         # Check y_axes series structure: series MUST be objects with 'id', not plain strings
         if 'y_axes' in elem and isinstance(elem['y_axes'], list):
             for axis_idx, y_axis in enumerate(elem['y_axes']):
@@ -302,6 +358,38 @@ def validate_dashboard_dict(dash, filepath):
                 f"[{dash_name}] Tile-scoped filter '{vf_name}' ('vis_filter: true') is bound to {bind_count} elements. "
                 "A vis_filter can only bind to a single visualization element."
             )
+
+    # 3b. Validate Dashboard Tile Group bounds & tab consistency
+    for gname, g_elem in group_defs.items():
+        g_tab = g_elem.get('tab_name')
+        g_width = g_elem.get('width')
+        g_height = g_elem.get('height')
+        max_child_bottom = 0
+        for cname, c_elem in group_children.get(gname, []):
+            if declared_tabs and c_elem.get('tab_name') != g_tab:
+                errors.append(
+                    f"[{dash_name} -> {cname}] Belongs to group '{gname}' (tab '{g_tab}') but has tab_name '{c_elem.get('tab_name')}'. "
+                    "Group containers and their children must reside on the same tab."
+                )
+            c_col = c_elem.get('col')
+            c_width = c_elem.get('width')
+            if isinstance(g_width, int) and isinstance(c_col, int) and isinstance(c_width, int):
+                if c_col + c_width > g_width:
+                    errors.append(
+                        f"[{dash_name} -> {cname}] Relative horizontal bounds inside group '{gname}' exceed parent width "
+                        f"(col={c_col} + width={c_width} = {c_col + c_width} > parent width={g_width})."
+                    )
+            c_row = c_elem.get('row')
+            c_height = c_elem.get('height')
+            if isinstance(c_row, int) and isinstance(c_height, int):
+                max_child_bottom = max(max_child_bottom, c_row + c_height)
+        if isinstance(g_height, int) and max_child_bottom > 0:
+            min_required_height = group_header_rows + max_child_bottom
+            if g_height < min_required_height:
+                errors.append(
+                    f"[{dash_name} -> {gname}] Group container height={g_height} is too small to enclose children "
+                    f"(requires >= {min_required_height} = {group_header_rows} header row(s) + max child bottom {max_child_bottom})."
+                )
 
     # 4. Check crossfilter_enabled across multiple explores
     if dash.get('crossfilter_enabled') is True and len(distinct_explores) > 1:

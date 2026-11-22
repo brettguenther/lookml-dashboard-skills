@@ -30,7 +30,7 @@ This reference provides exact visualization configuration options for Cartesian 
 | `series_colors.<series_id>` | `string` | `Color Overrides` | Hex color code specifying custom color override for a specific data series |
 | `series_labels.<series_id>` | `string` | `Label` | Custom label for a specific series in a Cartesian chart |
 | `series_point_styles.<series_id>` | `string (one of: 'circle', 'square', 'triangle', 'diamond', 'automatic')` | `Point Shapes Overrides` | Custom point shape style for a specific data series |
-| `series_types.<series_id>` | `string (one of: 'line', 'column', 'bar', 'area', 'scatter', 'pie')` | `Type` | Chart type override for a specific data series (for mixed-series charts) |
+| `series_types.<series_id>` | `string (one of: 'line', 'column', 'bar', 'area', 'scatter')` | `Type` | Chart type override for a specific data series (Looker's Highcharts adapter permits only these 5 types; never `looker_*`, `spline`, or `areaspline`) |
 | `show_dropoff` | `boolean (true/false)` | `Show Percent of Previous` | Display arrows showing percent change from previous value |
 | `show_null_labels` | `boolean (true/false)` | `Label Null Values` | Show value labels for null data points |
 | `show_null_points` | `boolean (true/false)` | `Plot Null Values` | Plot null values in a graph visualization |
@@ -108,7 +108,21 @@ This reference provides exact visualization configuration options for Cartesian 
    - When plotting 3 or more measures with `y_axis_combined: false`, always explicitly bind every measure in `y_axes[*].series` to either the `left` or `right` axis so Looker does not auto-create 3+ separate Y-axes.
 3. **`stacking: percent` + `label_value_format` Double-Scaling Bug**:
    - Never set `label_value_format: "0.00%"` on a `stacking: percent` chart — Highcharts already scales percent-stacked values to `0..100`, so a `%` format string multiplies by `100` a second time (`50.90%` renders as `5090.00%`). Leave `label_value_format` unset or use `"0.0\"%\""`.
-4. **Trailing Incomplete Period Cliff Suppression**:
-   - When weekly or monthly trend queries include a partial trailing period (e.g., current week with 1 day of data), suppress the incomplete trailing point without altering rolling calculations via `limit_displayed_rows: true` and `limit_displayed_rows_values: { show_hide: hide, first_last: last, num_rows: 1 }`.
+4. **Trailing Incomplete Period Cliff Suppression (Omit `fill_fields`)**:
+   - When weekly or monthly trend queries include a partial trailing period (e.g., current week with 1 day of data), suppress the incomplete trailing point without altering rolling calculations via `limit_displayed_rows: true` and `limit_displayed_rows_values: { show_hide: hide, first_last: last, num_rows: 1 }`. **Omit `fill_fields:` on that timeframe dimension**, otherwise Looker auto-fills a future empty row that absorbs `hide last 1` and leaves the partial period visible.
 5. **Cohort Retention Month 0 Scale Expansion**:
    - In retention curves where Month 0 is always `100%` and compresses Months 1–12, hide Month 0 while preserving it in table-calculation denominators using `limit_displayed_rows: true` and `limit_displayed_rows_values: { show_hide: hide, first_last: first, num_rows: 1 }`.
+
+---
+
+## Box Plot Rules & 5-Number Whisker Recipe (`type: looker_boxplot`, `modern2026: true`)
+
+Looker's box plot validator (`validate_boxplot.ts`) enforces **`>= 1` dimension**, **exactly `2`, `3`, or `5` visible measures**, **`0` pivots**, and **no visible `type: list` fields**:
+
+1. **3 Measures vs. 5 Measures (Whisker Rendering)**:
+   - **3 measures** map positionally to `[q1=m0, median=m1, q3=m2, high=m2]` with **no lower whisker** (`low = undefined`, visually resembling split bars).
+   - **5 measures** map positionally to `[low, q1, median, q3, high]`, rendering full P5–P95 (or Min/Max) whiskers and a `modern2026` solid filled box (`invert_box: true`) split by a white median line.
+2. **UDD / Zero-LookML-Change 5-Number Summary Pattern**:
+   - Because `dynamic_fields` custom measures on numeric dimensions do not support `type: percentile`, declare **1 hidden custom `type: list` measure** (`_type_hint: list` added to `hidden_fields:`) plus **5 `percentile(${list_measure}, 0.05|0.25|0.50|0.75|0.95)` table calculations**.
+3. **Critical `series_labels` Y-Axis URL-Encoding Bug**:
+   - **NEVER set `series_labels` on `looker_boxplot`**: Looker URL-encodes `series_labels` directly onto the Y-axis title (`%20`, `%28`, `%29`). Instead, configure the Y-axis title and format inside `y_axes: [{label: "...", valueFormat: "$#,##0", series: [{id: "<first_measure>", name: "..."}]}]` and color via `series_colors: {<first_measure>: "#1A73E8"}`.

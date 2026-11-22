@@ -220,27 +220,27 @@ Use `type: text` tiles for branding, subtitles, and section headers. See [Markdo
 
 ## 10. Dashboard Tile Groups (`type: group` & `group:`)
 
-Dashboard Tile Groups group multiple elements (e.g. scorecard KPIs, dual charts, or related tables) into a unified visual container box with an optional header banner and subtitle.
+Dashboard Tile Groups group multiple elements (e.g., scorecard KPIs, paired analytical charts, or related tables) into a unified visual container box with a header bar.
 
 ### Compiler & Layout Invariants
 
-1. **Relative Internal Coordinates**: Child elements that belong to a group (`group: <group_container_name>`) specify coordinates (`row`, `col`) **relative to the inside of the group container** (starting at `0, 0`).
-2. **Container Height Bounds**: The parent group container's `height` must be large enough to enclose all child elements (`container_height >= header_height + max_child_bottom`).
+1. **Relative Internal Coordinates**: Child elements that belong to a group (`group: <group_container_name>`) specify coordinates (`row`, `col`) **relative to the inside of the group container** (starting at `0, 0`; `groupColumns = parent.width`).
+2. **Exact Container Height (`GROUP_HEADER_STANDARD_ROWS = 1`)**: `GroupHeader` only renders `title:` (`subtitle_text` is not rendered in group headers). On the 24-column newspaper grid, the group header takes `1` row (`parent.height = 1 + max(child.row + child.height)`, e.g., `height: 5` for 4-row KPI cards, `height: 9` for 8-row charts); on the 72-column granular grid, the header takes `2` rows.
 3. **Tab Scoping**: A child element and its parent `type: group` container **must reside on the same tab** (`tab_name`).
 4. **No Nested Groups**: A child element cannot itself be a `type: group` container.
-5. **No Periods in Names**: The group `name` cannot contain periods (`.`).
+5. **No Periods in Names & `modern2026` Omission**: The group `name` cannot contain periods (`.`), and `type: group` must **omit** `modern2026`.
+6. **UDD Import Auto-Linking**: `POST /api/4.0/dashboards/lookml` (body key `"lookml"`) automatically links `dashboard_layout_components.group_id` when `enable_dashboard_tile_groups?` is enabled.
 
 ```yaml
 elements:
   - name: kpi_summary_group
     type: group
-    title: "Executive KPIs (Tile Group Container)"
-    subtitle_text: "Topline business performance indicators"
+    title: "Executive Scorecard KPIs"
     title_hidden: false
     row: 0
     col: 0
     width: 24
-    height: 6
+    height: 5                           # 1 header row + 4-row child height = 5 (zero dead padding)
 
   - name: revenue_kpi
     group: kpi_summary_group            # Links to parent group container name
@@ -331,7 +331,7 @@ vis_config:
 - [ ] Maps default to `type: looker_google_map` (`looker_geo_*` used only if explicitly requested).
 - [ ] `modern2026: true` is set on all supporting visualizations (cartesian, histogram, bullet, grid/table, funnel, timeline, wordcloud).
 - [ ] `modern2026` is omitted on `single_value`, `looker_single_record`, `type: group`, and map visualizations.
-- [ ] Any `type: group` element defines container `width` and `height`, and all child elements specify `group: <group_name>` using relative `row` and `col` coordinates (starting at `0, 0` inside the container).
+- [ ] Any `type: group` element defines `title:` (without relying on `subtitle_text`), omits `modern2026`, sizes `height: 1 + max(child.row + child.height)` (`2 + ...` on 72-col granular grids), keeps all children on the same `tab_name` with no nested groups, and uses relative child `row`/`col` coordinates starting at `0, 0`.
 - [ ] Any table with `row_groups.enabled: true` specifies `row_grouping_fields: [...]`, uses `'collapsed' | 'top_expanded' | 'all_expanded'` for `default_display_level`, sets integer pixel font sizes (`header_font_size: 12`, `rows_font_size: 12`), and omits pagination and sparklines.
 - [ ] Any table with `table_column_groups.enabled: true` omits query `pivots` and `transpose: true`.
 - [ ] Any tile-scoped filter (`vis_filter: true`) uses `ui_config.display: popover`, `required: false`, `listens_to_filters: []`, binds to exactly 1 visualization element in `listen:`, and pairs with `tile_filter_information: show_all`.

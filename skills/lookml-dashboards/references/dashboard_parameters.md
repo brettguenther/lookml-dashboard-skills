@@ -161,15 +161,15 @@ y_axes:
 
 ## 6. Dashboard Tile Groups (`type: group` & `group:`)
 
-Dashboard Tile Groups allow organizing multiple related cards (scorecard KPIs, chart pairs, or tables) into a unified visual container box with an optional header banner and subtitle.
+Dashboard Tile Groups allow organizing multiple related cards (scorecard KPIs, chart pairs, or tables) into a unified visual container box with a header bar.
 
 ### Key Rules & Invariants
 
-1. **Relative Internal Coordinates**: Child elements that belong to a group (`group: <group_container_name>`) use **relative coordinates** (`row`, `col`) positioned from `0, 0` inside the group container box.
-2. **Container Height Bounds**: The parent group container's `height` must be large enough to enclose all child elements (`container_height >= header_height + max_child_bottom`).
+1. **Relative Internal Coordinates**: Child elements that belong to a group (`group: <group_container_name>`) use **relative coordinates** (`row`, `col`) positioned from `0, 0` inside the group container box (`groupColumns = parent.width`).
+2. **Exact Container Height (`GROUP_HEADER_STANDARD_ROWS = 1`)**: Only `title:` renders in `GroupHeader` / `PrintGroupContainer` (`subtitle_text` is not displayed). Size `parent.height = 1 + max(child.row + child.height)` on the 24-col grid (`height: 5` for 4-row KPIs, `height: 9` for 8-row charts) or `2 + max(...)` on the 72-col granular grid.
 3. **Tab Scoping**: A child element and its parent `type: group` container **must reside on the same tab** (`tab_name`).
 4. **No Nested Groups**: A child element cannot itself be a `type: group` container.
-5. **No Periods in Names**: The group `name` cannot contain periods (`.`).
+5. **No Periods in Names & `modern2026` Omission**: The group `name` cannot contain periods (`.`), and `type: group` must omit `modern2026`.
 
 ### Syntax Example
 
@@ -179,12 +179,11 @@ elements:
   - name: executive_kpi_group
     type: group
     title: "Executive Scorecard KPIs"
-    subtitle_text: "Topline business health and volume metrics"
     title_hidden: false
     row: 0
     col: 0
     width: 24
-    height: 6
+    height: 5                           # 1 header row + 4-row KPI cards = 5
 
   # 2. Child Elements (using relative coordinates inside executive_kpi_group)
   - name: total_revenue_kpi
